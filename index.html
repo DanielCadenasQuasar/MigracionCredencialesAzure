@@ -1,16 +1,9 @@
 <!-- Chosen Palette: Azure Pro (Cobalto Intenso, Gris Galáctico y Nieve) -->
-<!-- Application Structure Plan: Dashboard corporativo con seguridad profesional integrada.
-     1. Capa de Seguridad: Interfaz de login con Firebase Auth (Email/Password) gratuita.
-     2. Dashboard Estratégico: Resumen de KPIs de migración.
-     3. Calendario Cronológico: Gestión de ventanas de producción L/M con diseño optimizado y scroll horizontal forzado.
-     4. Grid Técnico: Detalle granular con validación de los 4 pilares de Azure Identity.
-     Estructura optimizada para máxima visibilidad de datos y sincronización multi-dispositivo. -->
-<!-- Visualization & Content Choices: 
-     - Autenticación -> Formulario dinámico -> Seguridad gratuita profesional.
-     - Timeline -> Columnas ampliadas (250px) con scroll horizontal -> Mejorar legibilidad.
-     - Éxito Técnico -> Doughnut Chart (Chart.js).
-     - Carga de Trabajo -> Stacked Bar Chart (Chart.js).
-     - Iconografía -> Caracteres Unicode y CSS -> Cumplimiento de restricción NO SVG. -->
+<!-- Application Structure Plan: Dashboard corporativo con seguridad profesional mediante Email Link (Passwordless).
+     1. Capa de Seguridad: Autenticación por enlace de correo electrónico para eliminar contraseñas.
+     2. Dashboard Estratégico: Resumen de KPIs de migración y salud técnica.
+     3. Calendario Cronológico: Gestión de ventanas de producción L/M con tarjetas ampliadas (250px) y scroll horizontal.
+     4. Grid Técnico: Detalle granular con validación de los 4 pilares de Azure Identity. -->
 <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 <!DOCTYPE html>
 <html lang="es">
@@ -26,7 +19,6 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F8FAFC; scroll-behavior: smooth; }
         .chart-container { position: relative; width: 100%; max-width: 600px; margin: 0 auto; height: 280px; }
         
-        /* Configuración de scroll horizontal para el Timeline mejorada */
         .timeline-track { 
             display: flex; 
             overflow-x: auto; 
@@ -46,7 +38,6 @@
         .card-shadow { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04); transition: all 0.2s ease-in-out; }
         .card-shadow:hover { transform: translateY(-3px); box-shadow: 0 12px 25px -5px rgba(59, 130, 246, 0.1); }
         
-        /* Columnas de calendario con tamaño incrementado */
         .timeline-column { 
             min-width: 250px; 
             max-width: 250px; 
@@ -63,7 +54,14 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getAuth, 
+            sendSignInLinkToEmail, 
+            isSignInWithEmailLink, 
+            signInWithEmailLink, 
+            onAuthStateChanged, 
+            signOut 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -82,7 +80,32 @@
         window.auth = auth;
         window.db = db;
         window.firestoreTools = { doc, setDoc, onSnapshot, collection, updateDoc };
-        window.authTools = { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut };
+        window.authTools = { sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signOut };
+
+        // Configuración para el enlace de correo
+        const actionCodeSettings = {
+            url: window.location.href, // La URL a la que volverá el usuario (ej. GitHub Pages)
+            handleCodeInApp: true,
+        };
+
+        // Lógica de inicio y verificación de enlace
+        const initSession = async () => {
+            if (isSignInWithEmailLink(auth, window.location.href)) {
+                let email = window.localStorage.getItem('emailForSignIn');
+                if (!email) {
+                    email = window.prompt('Por favor, introduce tu correo electrónico para confirmar la sesión:');
+                }
+                try {
+                    await signInWithEmailLink(auth, email, window.location.href);
+                    window.localStorage.removeItem('emailForSignIn');
+                    // Limpiar la URL de los parámetros de Firebase
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                } catch (error) {
+                    console.error("Error al iniciar sesión con el enlace:", error);
+                    alert("El enlace ha expirado o no es válido.");
+                }
+            }
+        };
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -90,45 +113,72 @@
                 document.getElementById('main-dashboard').classList.remove('hidden');
                 document.getElementById('user-email-display').innerText = user.email;
                 if (!window.appStarted) {
-                    startApp();
                     window.appStarted = true;
+                    startApp();
                 }
             } else {
                 document.getElementById('auth-screen').classList.remove('hidden');
                 document.getElementById('main-dashboard').classList.add('hidden');
                 window.appStarted = false;
+                initSession(); // Comprobar si viene de un enlace
             }
         });
+
+        // Función global para enviar enlace
+        window.sendAccessLink = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value;
+            const btn = document.getElementById('auth-submit-btn');
+            const errEl = document.getElementById('auth-error');
+            const successEl = document.getElementById('auth-success');
+            
+            errEl.classList.add('hidden');
+            successEl.classList.add('hidden');
+            btn.disabled = true;
+            btn.innerText = "Enviando...";
+
+            try {
+                await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+                window.localStorage.setItem('emailForSignIn', email);
+                successEl.innerText = "¡Enlace enviado! Revisa tu bandeja de entrada.";
+                successEl.classList.remove('hidden');
+                btn.innerText = "Enviado";
+            } catch (error) {
+                console.error(error);
+                errEl.innerText = "Error al enviar el enlace. Revisa el correo.";
+                errEl.classList.remove('hidden');
+                btn.disabled = false;
+                btn.innerText = "Solicitar Acceso";
+            }
+        };
     </script>
 </head>
 <body class="text-slate-900">
 
-    <!-- Pantalla de Autenticación -->
+    <!-- Pantalla de Autenticación (Email Link) -->
     <div id="auth-screen" class="fixed inset-0 z-[200] login-gradient flex items-center justify-center p-6 hidden">
         <div class="bg-white w-full max-w-md rounded-[3rem] p-12 shadow-2xl overflow-hidden relative fade-in">
             <div class="absolute top-0 left-0 w-full h-2 bg-blue-600"></div>
             <div class="text-center mb-10">
                 <div class="bg-blue-50 w-16 h-16 rounded-2xl flex items-center justify-center text-blue-600 text-3xl font-black mx-auto mb-6">❖</div>
-                <h2 id="auth-title" class="text-2xl font-black text-slate-900">Identity Hub</h2>
-                <p id="auth-subtitle" class="text-slate-400 text-sm mt-2 font-medium">Introduce tus credenciales para acceder.</p>
+                <h2 class="text-2xl font-black text-slate-900">Acceso Seguro</h2>
+                <p class="text-slate-400 text-sm mt-2 font-medium">Enviaremos un enlace de acceso a tu correo para entrar sin contraseña.</p>
             </div>
 
-            <form id="auth-form" class="space-y-5">
+            <form id="auth-form" onsubmit="sendAccessLink(event)" class="space-y-5">
                 <div>
                     <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2">Correo Corporativo</label>
                     <input type="email" id="auth-email" required class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-100 transition-all">
                 </div>
-                <div>
-                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2">Contraseña</label>
-                    <input type="password" id="auth-pass" required class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-100 transition-all">
-                </div>
-                <p id="auth-error" class="text-red-500 text-[10px] font-bold uppercase text-center hidden"></p>
                 
-                <button type="submit" id="auth-submit-btn" class="w-full bg-blue-600 text-white font-bold py-5 rounded-2xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all transform active:scale-95">Iniciar Sesión</button>
+                <p id="auth-error" class="text-red-500 text-[10px] font-bold uppercase text-center hidden"></p>
+                <p id="auth-success" class="text-green-600 text-[10px] font-bold uppercase text-center hidden"></p>
+                
+                <button type="submit" id="auth-submit-btn" class="w-full bg-blue-600 text-white font-bold py-5 rounded-2xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all transform active:scale-95">Solicitar Enlace de Acceso</button>
             </form>
 
-            <div class="mt-8 text-center">
-                <button onclick="toggleAuthMode()" id="auth-toggle-link" class="text-xs font-bold text-slate-400 hover:text-blue-600 transition-colors">¿No tienes cuenta? Regístrate</button>
+            <div class="mt-8 pt-8 border-t border-slate-50 text-center">
+                <p class="text-[9px] font-bold text-slate-300 uppercase tracking-widest leading-loose">Passwordless Authentication<br>Azure Infrastructure Strategy 2026</p>
             </div>
         </div>
     </div>
@@ -175,7 +225,7 @@
                 </div>
             </section>
 
-            <!-- Sección: Timeline (Desplazable con tamaño incrementado) -->
+            <!-- Sección: Timeline (Tamaño Incrementado y Desplazable) -->
             <section id="timeline" class="mb-20">
                 <div class="flex justify-between items-end mb-8">
                     <div>
@@ -255,7 +305,6 @@
 
         let stateTasks = [];
         let filter = "TODOS";
-        let isSignupMode = false;
         let chartInstances = { doughnut: null, bar: null, header: null };
 
         const formatDate = (iso) => {
@@ -278,33 +327,6 @@
         };
 
         const getTs = (str) => { const iso = tryISO(str); return iso ? new Date(iso).getTime() : 0; };
-
-        // --- AUTH UI LOGIC ---
-        window.toggleAuthMode = () => {
-            isSignupMode = !isSignupMode;
-            document.getElementById('auth-title').innerText = isSignupMode ? "Registro" : "Identity Hub";
-            document.getElementById('auth-submit-btn').innerText = isSignupMode ? "Registrarse" : "Iniciar Sesión";
-            document.getElementById('auth-toggle-link').innerText = isSignupMode ? "¿Ya tienes cuenta? Login" : "¿No tienes cuenta? Regístrate";
-        };
-
-        document.getElementById('auth-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('auth-email').value;
-            const pass = document.getElementById('auth-pass').value;
-            const errEl = document.getElementById('auth-error');
-            errEl.classList.add('hidden');
-
-            try {
-                if (isSignupMode) {
-                    await window.authTools.createUserWithEmailAndPassword(window.auth, email, pass);
-                } else {
-                    await window.authTools.signInWithEmailAndPassword(window.auth, email, pass);
-                }
-            } catch (err) {
-                errEl.innerText = "Error de acceso: Comprueba los datos.";
-                errEl.classList.remove('hidden');
-            }
-        };
 
         // --- CORE APP LOGIC ---
         window.startApp = () => {
@@ -355,7 +377,7 @@
                 return `
                     <div class="timeline-column flex flex-col gap-3">
                         <div class="bg-white p-4 rounded-[1.5rem] border border-slate-100 shadow-sm relative overflow-hidden">
-                            <div class="absolute top-0 left-0 h-1 bg-blue-500/10 w-full"></div>
+                            <div class="absolute top-0 left-0 h-1 bg-blue-600/10 w-full"></div>
                             <div class="text-[9px] font-black text-blue-600 uppercase mb-0.5">${date.split(' ')[0]}</div>
                             <div class="text-[13px] font-extrabold text-slate-800 truncate">${date.split(' ').slice(1).join(' ')}</div>
                             <div class="w-full bg-slate-50 h-1.5 rounded-full mt-2.5 overflow-hidden">
@@ -382,10 +404,10 @@
             const grid = document.getElementById('grid-container');
             const items = filter === "TODOS" ? stateTasks : stateTasks.filter(t => t.client === filter);
             grid.innerHTML = items.map(t => `
-                <div class="bg-white rounded-[3rem] p-10 card-shadow border border-slate-50 relative group">
+                <div class="bg-white rounded-[3rem] p-10 card-shadow border border-slate-100 relative group">
                     <div class="flex justify-between items-start mb-8">
-                        <span class="text-[10px] font-black text-slate-200">ID ${t.id}</span>
-                        <button onclick="openEditor(${t.id})" class="p-2.5 rounded-full bg-slate-50 text-slate-300 hover:text-blue-600 opacity-0 group-hover:opacity-100 font-bold text-[10px] uppercase transition-all tracking-wider">Ajustar</button>
+                        <span class="text-[10px] font-black text-slate-200 uppercase tracking-widest">ID ${t.id}</span>
+                        <button onclick="openEditor(${t.id})" class="p-2.5 rounded-full bg-slate-50 text-slate-300 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-all font-bold text-[10px] uppercase">Ajustar</button>
                     </div>
                     <div class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-black uppercase mb-8 border-2 ${t.date.includes('Lunes') || t.date.includes('Martes') ? 'bg-indigo-50 border-indigo-100 text-indigo-700' : 'bg-amber-50 border-amber-100 text-amber-700'}">● ${t.date}</div>
                     <h3 class="text-2xl font-black text-slate-900 mb-2 leading-tight">${t.app}</h3>
@@ -413,7 +435,7 @@
         const renderCharts = () => {
             const done = stateTasks.filter(t => t.status === 'done').length;
             const total = stateTasks.length;
-            const perc = Math.round((done / stateTasks.length) * 100);
+            const perc = Math.round((done / total) * 100);
             document.getElementById('global-perc-display').innerText = `${perc}%`;
             const ctx1 = document.getElementById('statusDoughnut').getContext('2d');
             const ctx2 = document.getElementById('clientBarChart').getContext('2d');
@@ -421,7 +443,7 @@
             if (chartInstances.doughnut) chartInstances.doughnut.destroy();
             if (chartInstances.bar) chartInstances.bar.destroy();
             if (chartInstances.header) chartInstances.header.destroy();
-            chartInstances.doughnut = new Chart(ctx1, { type: 'doughnut', data: { labels: ['Validadas', 'Pdte'], datasets: [{ data: [done, stateTasks.length - done], backgroundColor: ['#2563eb', '#F1F5F9'], borderWidth: 0, cutout: '85%' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+            chartInstances.doughnut = new Chart(ctx1, { type: 'doughnut', data: { labels: ['Validadas', 'Pdte'], datasets: [{ data: [done, total - done], backgroundColor: ['#2563eb', '#F1F5F9'], borderWidth: 0, cutout: '85%' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
             const clients = [...new Set(SOURCE_REPORT.map(t => t.client))];
             chartInstances.bar = new Chart(ctx2, { type: 'bar', data: { labels: clients, datasets: [{ label: 'Validadas', data: clients.map(c => stateTasks.filter(t => t.client === c && t.status === 'done').length), backgroundColor: '#2563eb', borderRadius: 14 }, { label: 'Total', data: clients.map(c => stateTasks.filter(t => t.client === c && t.status !== 'done').length), backgroundColor: '#F1F5F9', borderRadius: 14 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true, display: false }, y: { stacked: true, border: { display: false }, grid: { display: false }, ticks: { font: { weight: '800', size: 10 } } } }, plugins: { legend: { display: false } } } });
             chartInstances.header = new Chart(ctx3, { type: 'doughnut', data: { datasets: [{ data: [perc, 100 - perc], backgroundColor: ['#2563eb', '#F1F5F9'], borderWidth: 0 }] }, options: { cutout: '78%', plugins: { tooltip: { enabled: false } } } });
@@ -447,7 +469,7 @@
             e.preventDefault();
             const id = document.getElementById('task-id').value;
             const date = formatDate(document.getElementById('task-date').value) || stateTasks.find(x => x.id == id).date;
-            const resp = document.getElementById('task-resp').value;
+            const resp = document.getElementById('edit-resp').value;
             await window.firestoreTools.updateDoc(window.firestoreTools.doc(window.db, 'tareas_migracion_v2', id), { date, responsible: resp });
             closeEditor();
         };
