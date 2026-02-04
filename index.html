@@ -2,14 +2,14 @@
 <!-- Application Structure Plan: Dashboard corporativo con seguridad profesional integrada.
      1. Capa de Seguridad: Interfaz de login con Firebase Auth (Email/Password) gratuita.
      2. Dashboard Estratégico: Resumen de KPIs de migración.
-     3. Calendario Cronológico: Gestión de ventanas de producción L/M con ordenación automática.
+     3. Calendario Cronológico: Gestión de ventanas de producción L/M con diseño ultra-compacto y scroll horizontal.
      4. Grid Técnico: Detalle granular con validación de los 4 pilares de Azure Identity.
-     Estructura diseñada para control de acceso por usuario y sincronización multi-dispositivo. -->
+     Estructura optimizada para alta densidad de información y sincronización multi-dispositivo. -->
 <!-- Visualization & Content Choices: 
      - Autenticación -> Formulario dinámico -> Seguridad gratuita profesional.
-     - Éxito Técnico -> Doughnut Chart (Chart.js) -> KPI principal.
-     - Carga de Trabajo -> Stacked Bar Chart (Chart.js) -> Distribución por cliente.
-     - Timeline -> Flexbox scrollable -> Roadmap del proyecto.
+     - Timeline -> Diseño de micro-tarjetas con scroll horizontal -> Maximizar visibilidad de fechas.
+     - Éxito Técnico -> Doughnut Chart (Chart.js).
+     - Carga de Trabajo -> Stacked Bar Chart (Chart.js).
      - Iconografía -> Caracteres Unicode y CSS -> Cumplimiento de restricción NO SVG. -->
 <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 <!DOCTYPE html>
@@ -24,17 +24,35 @@
     
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F8FAFC; scroll-behavior: smooth; }
-        .chart-container { position: relative; width: 100%; max-width: 600px; margin: 0 auto; height: 300px; }
-        .timeline-track { display: flex; overflow-x: auto; gap: 1.5rem; padding: 1rem 0.5rem; scroll-snap-type: x proximity; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin: 0 auto; height: 280px; }
+        
+        /* Configuración de scroll horizontal para el Timeline */
+        .timeline-track { 
+            display: flex; 
+            overflow-x: auto; 
+            gap: 1rem; 
+            padding: 0.5rem; 
+            scroll-snap-type: x proximity;
+            -webkit-overflow-scrolling: touch;
+        }
+        
         .timeline-track::-webkit-scrollbar { height: 6px; }
         .timeline-track::-webkit-scrollbar-track { background: #F1F5F9; border-radius: 10px; }
         .timeline-track::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+        .timeline-track::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
         .glass-nav { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(16px); }
-        .card-shadow { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .card-shadow:hover { transform: translateY(-4px); box-shadow: 0 15px 35px -5px rgba(59, 130, 246, 0.1); }
-        .timeline-column { min-width: 280px; max-width: 280px; scroll-snap-align: start; }
+        .card-shadow { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04); transition: all 0.2s ease-in-out; }
+        .card-shadow:hover { transform: translateY(-3px); box-shadow: 0 12px 25px -5px rgba(59, 130, 246, 0.1); }
+        
+        /* Columnas de calendario más estrechas para ver más de una vez */
+        .timeline-column { min-width: 220px; max-width: 220px; scroll-snap-align: start; }
+        
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .login-gradient { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
+        
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 
     <script type="module">
@@ -65,10 +83,14 @@
                 document.getElementById('auth-screen').classList.add('hidden');
                 document.getElementById('main-dashboard').classList.remove('hidden');
                 document.getElementById('user-email-display').innerText = user.email;
-                startApp();
+                if (!window.appStarted) {
+                    startApp();
+                    window.appStarted = true;
+                }
             } else {
                 document.getElementById('auth-screen').classList.remove('hidden');
                 document.getElementById('main-dashboard').classList.add('hidden');
+                window.appStarted = false;
             }
         });
     </script>
@@ -77,11 +99,11 @@
 
     <!-- Pantalla de Autenticación -->
     <div id="auth-screen" class="fixed inset-0 z-[200] login-gradient flex items-center justify-center p-6 hidden">
-        <div class="bg-white w-full max-w-md rounded-[3rem] p-12 shadow-2xl overflow-hidden relative">
+        <div class="bg-white w-full max-w-md rounded-[3rem] p-12 shadow-2xl overflow-hidden relative fade-in">
             <div class="absolute top-0 left-0 w-full h-2 bg-blue-600"></div>
             <div class="text-center mb-10">
                 <div class="bg-blue-50 w-16 h-16 rounded-2xl flex items-center justify-center text-blue-600 text-3xl font-black mx-auto mb-6">❖</div>
-                <h2 id="auth-title" class="text-2xl font-black text-slate-900">Bienvenido al Hub</h2>
+                <h2 id="auth-title" class="text-2xl font-black text-slate-900">Identity Hub</h2>
                 <p id="auth-subtitle" class="text-slate-400 text-sm mt-2 font-medium">Introduce tus credenciales para acceder.</p>
             </div>
 
@@ -114,7 +136,7 @@
                     <div>
                         <h1 class="text-lg font-extrabold tracking-tight">Identity Hub</h1>
                         <div class="flex items-center gap-1.5 text-[10px] font-bold text-green-500 uppercase tracking-widest">
-                            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Sesión Activa
+                            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Sincronizado
                         </div>
                     </div>
                 </div>
@@ -132,39 +154,46 @@
         </header>
 
         <main class="max-w-7xl mx-auto px-6 py-12">
-            <!-- Sección: Estrategia -->
+            <!-- Sección: Análisis -->
             <section id="analytics" class="mb-20">
-                <h2 class="text-3xl font-black text-slate-900 mb-10 tracking-tight">Visión Estratégica</h2>
+                <h2 class="text-3xl font-black text-slate-900 mb-10 tracking-tight">Análisis Estratégico</h2>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                    <div class="bg-white p-10 rounded-[3rem] card-shadow border border-slate-100">
-                        <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-10">Estado Global</h3>
-                        <div class="chart-container"><canvas id="statusDoughnut"></canvas></div>
+                    <div class="bg-white p-10 rounded-[3rem] card-shadow border border-slate-100 flex flex-col">
+                        <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-10">Consolidado Técnico</h3>
+                        <div class="chart-container flex-grow"><canvas id="statusDoughnut"></canvas></div>
                     </div>
-                    <div class="bg-white p-10 rounded-[3rem] card-shadow border border-slate-100">
-                        <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-10">Progreso Clientes</h3>
-                        <div class="chart-container"><canvas id="clientBarChart"></canvas></div>
+                    <div class="bg-white p-10 rounded-[3rem] card-shadow border border-slate-100 flex flex-col">
+                        <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-10">Progreso por Clientes</h3>
+                        <div class="chart-container flex-grow"><canvas id="clientBarChart"></canvas></div>
                     </div>
                 </div>
             </section>
 
-            <!-- Sección: Timeline -->
+            <!-- Sección: Timeline (Compacto y Desplazable) -->
             <section id="timeline" class="mb-20">
-                <h2 class="text-3xl font-black text-slate-900 mb-8 tracking-tight">Planificación Temporal</h2>
-                <div class="bg-slate-100/50 rounded-[3rem] p-6 border border-slate-200/60">
-                    <div id="timeline-container" class="timeline-track no-scrollbar"></div>
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <h2 class="text-3xl font-black text-slate-900 mb-2 tracking-tight">Planificación Temporal</h2>
+                        <p class="text-slate-500 text-sm font-medium">Hitos de subida a PROD (Lunes/Martes). Desliza para ver más.</p>
+                    </div>
+                </div>
+                <div class="bg-slate-100/50 rounded-[3rem] p-6 border border-slate-200/60 overflow-hidden">
+                    <div id="timeline-container" class="timeline-track no-scrollbar">
+                        <!-- Micro-cards dinámicas -->
+                    </div>
                 </div>
             </section>
 
-            <!-- Sección: Ejecución -->
+            <!-- Sección: Ejecución Técnica -->
             <section id="execution">
-                <h2 class="text-3xl font-black text-slate-900 mb-10 tracking-tight">Ejecución Técnica</h2>
+                <h2 class="text-3xl font-black text-slate-900 mb-10 tracking-tight">Detalle de Ejecución</h2>
                 <nav class="sticky top-24 z-40 overflow-x-auto no-scrollbar py-6 -mx-6 px-6 bg-slate-50/80 backdrop-blur-sm mb-10">
                     <div class="flex gap-3" id="filter-bar"></div>
                 </nav>
                 <div id="grid-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 mt-10">
                     <div id="loader" class="col-span-full py-40 flex flex-col items-center">
                         <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                        <p class="mt-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Sincronizando con Azure...</p>
+                        <p class="mt-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Sincronizando flujo de datos...</p>
                     </div>
                 </div>
             </section>
@@ -182,12 +211,12 @@
                     <input type="date" id="task-date" class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-100 transition-all">
                 </div>
                 <div>
-                    <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2">Responsable</label>
+                    <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2">Responsable del Pase</label>
                     <input type="text" id="task-resp" class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-100 transition-all">
                 </div>
                 <div class="flex gap-4 pt-4">
-                    <button type="button" onclick="closeEditor()" class="flex-1 bg-slate-100 text-slate-500 font-bold py-5 rounded-2xl hover:bg-slate-200">Cancelar</button>
-                    <button type="submit" class="flex-1 bg-blue-600 text-white font-bold py-5 rounded-2xl shadow-xl shadow-blue-200 hover:bg-blue-700">Guardar</button>
+                    <button type="button" onclick="closeEditor()" class="flex-1 bg-slate-100 text-slate-500 font-bold py-5 rounded-[1.5rem] hover:bg-slate-200 transition-colors">Cancelar</button>
+                    <button type="submit" class="flex-1 bg-blue-600 text-white font-bold py-5 rounded-[1.5rem] shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all">Guardar</button>
                 </div>
             </form>
         </div>
@@ -247,7 +276,7 @@
         // --- AUTH UI LOGIC ---
         window.toggleAuthMode = () => {
             isSignupMode = !isSignupMode;
-            document.getElementById('auth-title').innerText = isSignupMode ? "Crea una cuenta" : "Bienvenido al Hub";
+            document.getElementById('auth-title').innerText = isSignupMode ? "Registro" : "Identity Hub";
             document.getElementById('auth-submit-btn').innerText = isSignupMode ? "Registrarse" : "Iniciar Sesión";
             document.getElementById('auth-toggle-link').innerText = isSignupMode ? "¿Ya tienes cuenta? Login" : "¿No tienes cuenta? Regístrate";
         };
@@ -266,7 +295,7 @@
                     await window.authTools.signInWithEmailAndPassword(window.auth, email, pass);
                 }
             } catch (err) {
-                errEl.innerText = "Error: Credenciales no válidas o usuario existente.";
+                errEl.innerText = "Error de acceso: Comprueba los datos.";
                 errEl.classList.remove('hidden');
             }
         };
@@ -310,23 +339,34 @@
             const container = document.getElementById('timeline-container');
             const datesMap = {};
             stateTasks.forEach(t => { if(!datesMap[t.date]) datesMap[t.date] = []; datesMap[t.date].push(t); });
+            
             const sorted = Object.keys(datesMap).sort((a,b) => getTs(a) - getTs(b));
+            
             container.innerHTML = sorted.map(date => {
                 const grp = datesMap[date];
-                const perc = Math.round((grp.filter(t => t.status === 'done').length / grp.length) * 100);
+                const done = grp.filter(t => t.status === 'done').length;
+                const perc = Math.round((done / grp.length) * 100);
                 return `
-                    <div class="timeline-column flex flex-col gap-3">
-                        <div class="bg-white p-4 rounded-[1.5rem] border border-slate-100 shadow-sm relative overflow-hidden">
-                            <div class="text-[9px] font-black text-blue-600 uppercase mb-0.5">${date.split(' ')[0]}</div>
-                            <div class="text-[12px] font-black text-slate-800 mb-2">${date.split(' ').slice(1).join(' ')}</div>
-                            <div class="w-full bg-slate-50 h-1.5 rounded-full overflow-hidden"><div class="bg-blue-600 h-full transition-all duration-700" style="width: ${perc}%"></div></div>
-                        </div>
-                        <div class="flex flex-col gap-2">${grp.map(t => `
-                            <div onclick="openEditor(${t.id})" class="cursor-pointer group bg-white/60 p-3 rounded-xl border border-white hover:border-blue-100 card-shadow transition-all">
-                                <div class="flex justify-between items-center mb-1.5"><span class="text-[8px] font-black text-slate-400 uppercase truncate pr-2">${t.client}</span><div class="w-1.5 h-1.5 rounded-full ${t.status === 'done' ? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.3)]' : 'bg-slate-200'}"></div></div>
-                                <div class="text-[10px] font-bold text-slate-700 truncate group-hover:text-blue-600">${t.app}</div>
+                    <div class="timeline-column flex flex-col gap-2.5">
+                        <div class="bg-white p-3.5 rounded-[1.5rem] border border-slate-100 shadow-sm relative overflow-hidden">
+                            <div class="absolute top-0 left-0 h-1 bg-blue-500/10 w-full"></div>
+                            <div class="text-[8px] font-black text-blue-600 uppercase mb-0.5">${date.split(' ')[0]}</div>
+                            <div class="text-[11px] font-black text-slate-800 truncate">${date.split(' ').slice(1).join(' ')}</div>
+                            <div class="w-full bg-slate-50 h-1 rounded-full mt-2 overflow-hidden">
+                                <div class="bg-blue-600 h-full transition-all duration-700" style="width: ${perc}%"></div>
                             </div>
-                        `).join('')}</div>
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            ${grp.map(t => `
+                                <div onclick="openEditor(${t.id})" class="cursor-pointer group bg-white/70 p-2.5 rounded-xl border border-white hover:border-blue-100 card-shadow transition-all">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-[7px] font-black text-slate-400 uppercase truncate pr-1">${t.client}</span>
+                                        <div class="w-1.5 h-1.5 rounded-full ${t.status === 'done' ? 'bg-green-500' : 'bg-slate-200'}"></div>
+                                    </div>
+                                    <div class="text-[10px] font-bold text-slate-700 truncate leading-tight group-hover:text-blue-600">${t.app}</div>
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -336,17 +376,28 @@
             const grid = document.getElementById('grid-container');
             const items = filter === "TODOS" ? stateTasks : stateTasks.filter(t => t.client === filter);
             grid.innerHTML = items.map(t => `
-                <div class="bg-white rounded-[3.5rem] p-10 card-shadow border border-slate-100 relative group">
-                    <div class="flex justify-between items-start mb-8"><span class="text-[10px] font-black text-slate-200">ID ${t.id}</span><button onclick="openEditor(${t.id})" class="p-2.5 rounded-full bg-slate-50 text-slate-300 hover:text-blue-600 opacity-0 group-hover:opacity-100 font-bold text-[10px] uppercase transition-all tracking-wider">Ajustar</button></div>
+                <div class="bg-white rounded-[3rem] p-10 card-shadow border border-slate-50 relative group">
+                    <div class="flex justify-between items-start mb-8">
+                        <span class="text-[10px] font-black text-slate-200">ID ${t.id}</span>
+                        <button onclick="openEditor(${t.id})" class="p-2.5 rounded-full bg-slate-50 text-slate-300 hover:text-blue-600 opacity-0 group-hover:opacity-100 font-bold text-[10px] uppercase transition-all tracking-wider">Ajustar</button>
+                    </div>
                     <div class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-black uppercase mb-8 border-2 ${t.date.includes('Lunes') || t.date.includes('Martes') ? 'bg-indigo-50 border-indigo-100 text-indigo-700' : 'bg-amber-50 border-amber-100 text-amber-700'}">● ${t.date}</div>
                     <h3 class="text-2xl font-black text-slate-900 mb-2 leading-tight">${t.app}</h3>
                     <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-10">${t.client}</p>
                     <div class="flex items-center gap-4 bg-slate-50/50 p-4 rounded-2xl mb-12 border border-slate-50">
                         <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black text-xs">${t.responsible.split(' ').map(n => n[0]).join('')}</div>
-                        <div><p class="text-[9px] font-black text-slate-300 uppercase leading-none mb-1">Encargado</p><span class="text-sm font-extrabold text-slate-700 tracking-tight">${t.responsible}</span></div>
+                        <div><p class="text-[9px] font-black text-slate-300 uppercase leading-none mb-1">Encargado</p><span class="text-sm font-extrabold text-slate-700">${t.responsible}</span></div>
                     </div>
-                    <div class="space-y-4 mb-10">${renderCheck(t.id, 'sql', 'SQL Identity Auth', t.components.sql)}${renderCheck(t.id, 'storage', 'Azure Storage Auth', t.components.storage)}${renderCheck(t.id, 'redis', 'Redis managed identity', t.components.redis)}${renderCheck(t.id, 'keyvault', 'Key Vault Sync Secrets', t.components.keyvault)}</div>
-                    <div class="pt-8 border-t border-slate-100 flex items-center gap-3"><div class="w-3.5 h-3.5 rounded-full ${t.status === 'done' ? 'bg-green-500 animate-pulse' : 'bg-slate-200'}"></div><span class="text-[11px] font-black uppercase tracking-[0.1em] ${t.status === 'done' ? 'text-green-600' : 'text-slate-400'}">${t.status === 'done' ? 'Listo para PROD' : 'Pendiente Validación'}</span></div>
+                    <div class="space-y-4 mb-10">
+                        ${renderCheck(t.id, 'sql', 'SQL Identity Auth', t.components.sql)}
+                        ${renderCheck(t.id, 'storage', 'Azure Storage Auth', t.components.storage)}
+                        ${renderCheck(t.id, 'redis', 'Redis Managed Creds', t.components.redis)}
+                        ${renderCheck(t.id, 'keyvault', 'Key Vault Sync', t.components.keyvault)}
+                    </div>
+                    <div class="pt-8 border-t border-slate-50 flex items-center gap-3">
+                        <div class="w-3.5 h-3.5 rounded-full ${t.status === 'done' ? 'bg-green-500 animate-pulse' : 'bg-slate-200'}"></div>
+                        <span class="text-[11px] font-black uppercase tracking-[0.1em] ${t.status === 'done' ? 'text-green-600' : 'text-slate-400'}">${t.status === 'done' ? 'Validado para PROD' : 'Pendiente Validación'}</span>
+                    </div>
                 </div>
             `).join('');
         };
@@ -365,7 +416,7 @@
             if (chartInstances.header) chartInstances.header.destroy();
             chartInstances.doughnut = new Chart(ctx1, { type: 'doughnut', data: { labels: ['Validadas', 'Pdte'], datasets: [{ data: [done, stateTasks.length - done], backgroundColor: ['#2563eb', '#F1F5F9'], borderWidth: 0, cutout: '85%' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
             const clients = [...new Set(SOURCE_REPORT.map(t => t.client))];
-            chartInstances.bar = new Chart(ctx2, { type: 'bar', data: { labels: clients, datasets: [{ label: 'Validadas', data: clients.map(c => stateTasks.filter(t => t.client === c && t.status === 'done').length), backgroundColor: '#2563eb', borderRadius: 14 }, { label: 'Backlog', data: clients.map(c => stateTasks.filter(t => t.client === c && t.status !== 'done').length), backgroundColor: '#F1F5F9', borderRadius: 14 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true, display: false }, y: { stacked: true, border: { display: false }, grid: { display: false }, ticks: { font: { weight: '800', size: 10 } } } }, plugins: { legend: { display: false } } } });
+            chartInstances.bar = new Chart(ctx2, { type: 'bar', data: { labels: clients, datasets: [{ label: 'Validadas', data: clients.map(c => stateTasks.filter(t => t.client === c && t.status === 'done').length), backgroundColor: '#2563eb', borderRadius: 14 }, { label: 'Total', data: clients.map(c => stateTasks.filter(t => t.client === c && t.status !== 'done').length), backgroundColor: '#F1F5F9', borderRadius: 14 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true, display: false }, y: { stacked: true, border: { display: false }, grid: { display: false }, ticks: { font: { weight: '800', size: 10 } } } }, plugins: { legend: { display: false } } } });
             chartInstances.header = new Chart(ctx3, { type: 'doughnut', data: { datasets: [{ data: [perc, 100 - perc], backgroundColor: ['#2563eb', '#F1F5F9'], borderWidth: 0 }] }, options: { cutout: '78%', plugins: { tooltip: { enabled: false } } } });
         };
 
