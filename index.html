@@ -74,11 +74,9 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = "migracion-identity-hub-v2";
         
         window.auth = auth;
         window.db = db;
-        window.appId = appId;
         window.firestoreTools = { doc, setDoc, onSnapshot, collection, updateDoc };
         window.authTools = { sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signInWithEmailAndPassword, signOut };
 
@@ -115,6 +113,7 @@
 
         onAuthStateChanged(auth, (user) => {
             if (user && checkDomain(user.email)) {
+                console.log("Autenticado con éxito:", user.email);
                 document.getElementById('auth-screen').classList.add('hidden');
                 document.getElementById('main-dashboard').classList.remove('hidden');
                 document.getElementById('user-email-display').innerText = user.email;
@@ -123,7 +122,10 @@
                     startApp();
                 }
             } else {
-                if (user) signOut(auth);
+                if (user) {
+                    console.warn("Usuario logado pero fuera de dominio:", user.email);
+                    signOut(auth);
+                }
                 document.getElementById('auth-screen').classList.remove('hidden');
                 document.getElementById('main-dashboard').classList.add('hidden');
                 window.appStarted = false;
@@ -321,14 +323,6 @@
         let filter = "TODOS";
         let chartInstances = { doughnut: null, bar: null, header: null };
 
-        const formatDate = (iso) => {
-            if (!iso) return "";
-            const days = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-            const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-            const d = new Date(iso + 'T12:00:00');
-            return `${days[d.getDay()]} ${d.getDate()} de ${months[d.getMonth()]}`;
-        };
-
         const tryISO = (str) => {
             try {
                 const months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
@@ -342,14 +336,14 @@
 
         window.startApp = () => {
             const { onSnapshot, collection, doc, setDoc } = window.firestoreTools;
-            // REGLA 1: Usar la ruta estricta de artefactos
-            const collectionRef = collection(window.db, 'artifacts', window.appId, 'public', 'data', 'migrationTasks');
+            // NUEVA RUTA SIMPLIFICADA PARA EVITAR CONFLICTOS DE REGLAS
+            const collectionRef = collection(window.db, 'public_data', 'migrationTasks');
 
             onSnapshot(collectionRef, (snap) => {
                 document.getElementById('firestore-error').classList.add('hidden');
                 if (snap.empty) {
                     const init = SOURCE_REPORT.map(t => ({ ...t, status: 'pending', components: { sql: false, storage: false, redis: false, keyvault: false } }));
-                    init.forEach(i => setDoc(doc(window.db, 'artifacts', window.appId, 'public', 'data', 'migrationTasks', i.id.toString()), i));
+                    init.forEach(i => setDoc(doc(window.db, 'public_data', 'migrationTasks', i.id.toString()), i).catch(e => console.warn("Fallo inicialización doc:", i.id)));
                     stateTasks = init;
                 } else {
                     stateTasks = snap.docs.map(d => d.data()).sort((a,b) => a.id - b.id);
@@ -358,7 +352,7 @@
             }, (error) => {
                 console.error("Firestore Permission Error:", error);
                 document.getElementById('firestore-error').classList.remove('hidden');
-                document.getElementById('firestore-error-msg').innerText = "Acceso denegado: " + error.message + ". Asegúrate de que las reglas de Firebase permitan leer en la ruta de artefactos para usuarios @quasar.es";
+                document.getElementById('firestore-error-msg').innerText = "Acceso denegado: Insufficient Permissions. Por favor, actualiza las reglas en tu consola de Firebase.";
                 document.getElementById('loader')?.remove();
             });
         };
@@ -428,15 +422,15 @@
                     <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-10">${t.client}</p>
                     <div class="flex items-center gap-4 bg-slate-50/50 p-4 rounded-2xl mb-12 border border-slate-50">
                         <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black text-xs">${t.responsible.split(' ').map(n => n[0]).join('')}</div>
-                        <div><p class="text-[9px] font-black text-slate-300 uppercase leading-none mb-1">Encargado</p><span class="text-sm font-extrabold text-slate-700">${t.responsible}</span></div>
+                        <div><p class="text-[9px] font-black text-slate-300 uppercase leading-none mb-1">Encargado</p><span class="text-sm font-extrabold text-slate-700 tracking-tight">${t.responsible}</span></div>
                     </div>
                     <div class="space-y-4 mb-10">
                         ${renderCheck(t.id, 'sql', 'SQL Identity Auth', t.components.sql)}
                         ${renderCheck(t.id, 'storage', 'Azure Storage Auth', t.components.storage)}
-                        ${renderCheck(t.id, 'redis', 'Redis Managed Creds', t.components.redis)}
-                        ${renderCheck(t.id, 'keyvault', 'Key Vault Sync', t.components.keyvault)}
+                        ${renderCheck(t.id, 'redis', 'Redis Managed identity', t.components.redis)}
+                        ${renderCheck(t.id, 'keyvault', 'Key Vault Sync secrets', t.components.keyvault)}
                     </div>
-                    <div class="pt-8 border-t border-slate-50 flex items-center gap-3">
+                    <div class="pt-8 border-t border-slate-100 flex items-center gap-3">
                         <div class="w-3.5 h-3.5 rounded-full ${t.status === 'done' ? 'bg-green-500 animate-pulse' : 'bg-slate-200'}"></div>
                         <span class="text-[11px] font-black uppercase tracking-[0.1em] ${t.status === 'done' ? 'text-green-600' : 'text-slate-400'}">${t.status === 'done' ? 'Validado para PROD' : 'Pendiente Validación'}</span>
                     </div>
@@ -467,7 +461,7 @@
             const task = stateTasks.find(t => t.id === id);
             task.components[k] = !task.components[k];
             task.status = Object.values(task.components).every(v => v) ? 'done' : 'pending';
-            await window.firestoreTools.updateDoc(window.firestoreTools.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'migrationTasks', id.toString()), { components: task.components, status: task.status });
+            await window.firestoreTools.updateDoc(window.firestoreTools.doc(window.db, 'public_data', 'migrationTasks', id.toString()), { components: task.components, status: task.status });
         };
         window.openEditor = (id) => {
             const t = stateTasks.find(x => x.id === id);
@@ -481,10 +475,17 @@
         document.getElementById('editor-form').onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('task-id').value;
-            const date = formatDate(document.getElementById('task-date').value) || stateTasks.find(x => x.id == id).date;
+            const date = document.getElementById('task-date').value ? formatDateToSpanish(document.getElementById('task-date').value) : stateTasks.find(x => x.id == id).date;
             const resp = document.getElementById('task-resp').value;
-            await window.firestoreTools.updateDoc(window.firestoreTools.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'migrationTasks', id), { date, responsible: resp });
+            await window.firestoreTools.updateDoc(window.firestoreTools.doc(window.db, 'public_data', 'migrationTasks', id), { date, responsible: resp });
             closeEditor();
+        };
+
+        const formatDateToSpanish = (iso) => {
+            const days = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+            const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            const d = new Date(iso + 'T12:00:00');
+            return `${days[d.getDay()]} ${d.getDate()} de ${months[d.getMonth()]}`;
         };
     </script>
 </body>
