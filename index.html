@@ -1,6 +1,6 @@
 <!-- Chosen Palette: Azure Pro (Cobalto Intenso, Gris Galáctico y Nieve) -->
-<!-- Application Structure Plan: Dashboard corporativo con seguridad profesional mediante Email Link (Passwordless).
-     1. Capa de Seguridad: Autenticación por enlace de correo electrónico para eliminar contraseñas.
+<!-- Application Structure Plan: Dashboard corporativo con seguridad profesional mediante Whitelist y Email Link.
+     1. Capa de Seguridad: Autenticación por enlace de correo electrónico restringida por lista blanca (Whitelist).
      2. Dashboard Estratégico: Resumen de KPIs de migración y salud técnica.
      3. Calendario Cronológico: Gestión de ventanas de producción L/M con tarjetas ampliadas (250px) y scroll horizontal.
      4. Grid Técnico: Detalle granular con validación de los 4 pilares de Azure Identity. -->
@@ -64,6 +64,13 @@
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // --- CONFIGURACIÓN DE SEGURIDAD (LISTA BLANCA) ---
+        const AUTHORIZED_EMAILS = [
+            "tu-email@empresa.com", 
+            "compañero@empresa.com"
+            // Añade aquí todos los emails autorizados
+        ];
+
         const firebaseConfig = {
             apiKey: "AIzaSyCEGY53yVpqc-3kD1q9vS3nBV6gkHWO9Ew",
             authDomain: "migracioncredencialesazure.firebaseapp.com",
@@ -82,33 +89,38 @@
         window.firestoreTools = { doc, setDoc, onSnapshot, collection, updateDoc };
         window.authTools = { sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signOut };
 
-        // Configuración para el enlace de correo
         const actionCodeSettings = {
-            url: window.location.href, // La URL a la que volverá el usuario (ej. GitHub Pages)
+            url: window.location.href,
             handleCodeInApp: true,
         };
 
-        // Lógica de inicio y verificación de enlace
         const initSession = async () => {
             if (isSignInWithEmailLink(auth, window.location.href)) {
                 let email = window.localStorage.getItem('emailForSignIn');
                 if (!email) {
-                    email = window.prompt('Por favor, introduce tu correo electrónico para confirmar la sesión:');
+                    email = window.prompt('Confirma tu correo electrónico para completar el acceso:');
                 }
+                
+                // Verificación extra en la confirmación
+                if (!AUTHORIZED_EMAILS.includes(email.toLowerCase())) {
+                    alert("Este correo no está autorizado en la lista blanca.");
+                    window.location.href = window.location.pathname;
+                    return;
+                }
+
                 try {
                     await signInWithEmailLink(auth, email, window.location.href);
                     window.localStorage.removeItem('emailForSignIn');
-                    // Limpiar la URL de los parámetros de Firebase
                     window.history.replaceState({}, document.title, window.location.pathname);
                 } catch (error) {
-                    console.error("Error al iniciar sesión con el enlace:", error);
-                    alert("El enlace ha expirado o no es válido.");
+                    console.error(error);
+                    alert("El enlace ha expirado o ya ha sido utilizado.");
                 }
             }
         };
 
         onAuthStateChanged(auth, (user) => {
-            if (user) {
+            if (user && AUTHORIZED_EMAILS.includes(user.email.toLowerCase())) {
                 document.getElementById('auth-screen').classList.add('hidden');
                 document.getElementById('main-dashboard').classList.remove('hidden');
                 document.getElementById('user-email-display').innerText = user.email;
@@ -117,68 +129,75 @@
                     startApp();
                 }
             } else {
+                if (user) signOut(auth); // Forzar salida si no está en la lista
                 document.getElementById('auth-screen').classList.remove('hidden');
                 document.getElementById('main-dashboard').classList.add('hidden');
                 window.appStarted = false;
-                initSession(); // Comprobar si viene de un enlace
+                initSession();
             }
         });
 
-        // Función global para enviar enlace
         window.sendAccessLink = async (e) => {
             e.preventDefault();
-            const email = document.getElementById('auth-email').value;
+            const email = document.getElementById('auth-email').value.toLowerCase();
             const btn = document.getElementById('auth-submit-btn');
             const errEl = document.getElementById('auth-error');
             const successEl = document.getElementById('auth-success');
             
             errEl.classList.add('hidden');
             successEl.classList.add('hidden');
+
+            // --- VALIDACIÓN DE LISTA BLANCA ---
+            if (!AUTHORIZED_EMAILS.includes(email)) {
+                errEl.innerText = "Acceso denegado: Este correo no está en la lista blanca.";
+                errEl.classList.remove('hidden');
+                return;
+            }
+
             btn.disabled = true;
-            btn.innerText = "Enviando...";
+            btn.innerText = "Validando...";
 
             try {
                 await sendSignInLinkToEmail(auth, email, actionCodeSettings);
                 window.localStorage.setItem('emailForSignIn', email);
                 successEl.innerText = "¡Enlace enviado! Revisa tu bandeja de entrada.";
                 successEl.classList.remove('hidden');
-                btn.innerText = "Enviado";
+                btn.innerText = "Enlace Enviado";
             } catch (error) {
-                console.error(error);
-                errEl.innerText = "Error al enviar el enlace. Revisa el correo.";
+                errEl.innerText = "Error al conectar con Firebase.";
                 errEl.classList.remove('hidden');
                 btn.disabled = false;
-                btn.innerText = "Solicitar Acceso";
+                btn.innerText = "Solicitar Enlace";
             }
         };
     </script>
 </head>
 <body class="text-slate-900">
 
-    <!-- Pantalla de Autenticación (Email Link) -->
+    <!-- Pantalla de Autenticación (Whitelist) -->
     <div id="auth-screen" class="fixed inset-0 z-[200] login-gradient flex items-center justify-center p-6 hidden">
         <div class="bg-white w-full max-w-md rounded-[3rem] p-12 shadow-2xl overflow-hidden relative fade-in">
             <div class="absolute top-0 left-0 w-full h-2 bg-blue-600"></div>
             <div class="text-center mb-10">
                 <div class="bg-blue-50 w-16 h-16 rounded-2xl flex items-center justify-center text-blue-600 text-3xl font-black mx-auto mb-6">❖</div>
-                <h2 class="text-2xl font-black text-slate-900">Acceso Seguro</h2>
-                <p class="text-slate-400 text-sm mt-2 font-medium">Enviaremos un enlace de acceso a tu correo para entrar sin contraseña.</p>
+                <h2 class="text-2xl font-black text-slate-900 tracking-tight">Acceso Corporativo</h2>
+                <p class="text-slate-400 text-sm mt-2 font-medium">Solo usuarios en la lista blanca pueden solicitar el acceso.</p>
             </div>
 
             <form id="auth-form" onsubmit="sendAccessLink(event)" class="space-y-5">
                 <div>
-                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2">Correo Corporativo</label>
-                    <input type="email" id="auth-email" required class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-100 transition-all">
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2">Correo Autorizado</label>
+                    <input type="email" id="auth-email" required placeholder="usuario@empresa.com" class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-100 transition-all">
                 </div>
                 
                 <p id="auth-error" class="text-red-500 text-[10px] font-bold uppercase text-center hidden"></p>
                 <p id="auth-success" class="text-green-600 text-[10px] font-bold uppercase text-center hidden"></p>
                 
-                <button type="submit" id="auth-submit-btn" class="w-full bg-blue-600 text-white font-bold py-5 rounded-2xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all transform active:scale-95">Solicitar Enlace de Acceso</button>
+                <button type="submit" id="auth-submit-btn" class="w-full bg-blue-600 text-white font-bold py-5 rounded-2xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all transform active:scale-95">Solicitar Acceso</button>
             </form>
 
             <div class="mt-8 pt-8 border-t border-slate-50 text-center">
-                <p class="text-[9px] font-bold text-slate-300 uppercase tracking-widest leading-loose">Passwordless Authentication<br>Azure Infrastructure Strategy 2026</p>
+                <p class="text-[9px] font-bold text-slate-300 uppercase tracking-widest leading-loose text-pretty">Seguridad Profesional Basada en Whitelist<br>Azure Identity Strategy 2026</p>
             </div>
         </div>
     </div>
@@ -192,7 +211,7 @@
                     <div>
                         <h1 class="text-lg font-extrabold tracking-tight">Identity Hub</h1>
                         <div class="flex items-center gap-1.5 text-[10px] font-bold text-green-500 uppercase tracking-widest">
-                            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Sincronizado
+                            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Acceso Autorizado
                         </div>
                     </div>
                 </div>
@@ -210,9 +229,9 @@
         </header>
 
         <main class="max-w-7xl mx-auto px-6 py-12">
-            <!-- Sección: Análisis -->
+            <!-- Análisis -->
             <section id="analytics" class="mb-20">
-                <h2 class="text-3xl font-black text-slate-900 mb-10 tracking-tight">Análisis Estratégico</h2>
+                <h2 class="text-3xl font-black text-slate-900 mb-10 tracking-tight">Resumen de Estado</h2>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
                     <div class="bg-white p-10 rounded-[3rem] card-shadow border border-slate-100 flex flex-col">
                         <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-10">Consolidado Técnico</h3>
@@ -225,22 +244,15 @@
                 </div>
             </section>
 
-            <!-- Sección: Timeline (Tamaño Incrementado y Desplazable) -->
+            <!-- Timeline -->
             <section id="timeline" class="mb-20">
-                <div class="flex justify-between items-end mb-8">
-                    <div>
-                        <h2 class="text-3xl font-black text-slate-900 mb-2 tracking-tight">Planificación Temporal</h2>
-                        <p class="text-slate-500 text-sm font-medium">Hitos de subida a PROD. Desliza hacia la derecha para ver futuras ventanas.</p>
-                    </div>
-                </div>
+                <h2 class="text-3xl font-black text-slate-900 mb-8 tracking-tight">Planificación Temporal</h2>
                 <div class="bg-slate-100/50 rounded-[3rem] p-6 border border-slate-200/60 overflow-hidden">
-                    <div id="timeline-container" class="timeline-track">
-                        <!-- Tarjetas dinámicas con flex-shrink-0 -->
-                    </div>
+                    <div id="timeline-container" class="timeline-track"></div>
                 </div>
             </section>
 
-            <!-- Sección: Ejecución Técnica -->
+            <!-- Ejecución -->
             <section id="execution">
                 <h2 class="text-3xl font-black text-slate-900 mb-10 tracking-tight">Detalle de Ejecución</h2>
                 <nav class="sticky top-24 z-40 overflow-x-auto no-scrollbar py-6 -mx-6 px-6 bg-slate-50/80 backdrop-blur-sm mb-10">
@@ -249,7 +261,7 @@
                 <div id="grid-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 mt-10">
                     <div id="loader" class="col-span-full py-40 flex flex-col items-center">
                         <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                        <p class="mt-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Sincronizando flujo de datos...</p>
+                        <p class="mt-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Cargando datos seguros...</p>
                     </div>
                 </div>
             </section>
@@ -328,7 +340,6 @@
 
         const getTs = (str) => { const iso = tryISO(str); return iso ? new Date(iso).getTime() : 0; };
 
-        // --- CORE APP LOGIC ---
         window.startApp = () => {
             const { onSnapshot, collection, doc, setDoc } = window.firestoreTools;
             const ref = collection(window.db, 'tareas_migracion_v2');
@@ -367,9 +378,7 @@
             const container = document.getElementById('timeline-container');
             const datesMap = {};
             stateTasks.forEach(t => { if(!datesMap[t.date]) datesMap[t.date] = []; datesMap[t.date].push(t); });
-            
             const sorted = Object.keys(datesMap).sort((a,b) => getTs(a) - getTs(b));
-            
             container.innerHTML = sorted.map(date => {
                 const grp = datesMap[date];
                 const done = grp.filter(t => t.status === 'done').length;
@@ -377,7 +386,7 @@
                 return `
                     <div class="timeline-column flex flex-col gap-3">
                         <div class="bg-white p-4 rounded-[1.5rem] border border-slate-100 shadow-sm relative overflow-hidden">
-                            <div class="absolute top-0 left-0 h-1 bg-blue-600/10 w-full"></div>
+                            <div class="absolute top-0 left-0 h-1 bg-blue-500/10 w-full"></div>
                             <div class="text-[9px] font-black text-blue-600 uppercase mb-0.5">${date.split(' ')[0]}</div>
                             <div class="text-[13px] font-extrabold text-slate-800 truncate">${date.split(' ').slice(1).join(' ')}</div>
                             <div class="w-full bg-slate-50 h-1.5 rounded-full mt-2.5 overflow-hidden">
@@ -404,10 +413,10 @@
             const grid = document.getElementById('grid-container');
             const items = filter === "TODOS" ? stateTasks : stateTasks.filter(t => t.client === filter);
             grid.innerHTML = items.map(t => `
-                <div class="bg-white rounded-[3rem] p-10 card-shadow border border-slate-100 relative group">
+                <div class="bg-white rounded-[3rem] p-10 card-shadow border border-slate-50 relative group">
                     <div class="flex justify-between items-start mb-8">
                         <span class="text-[10px] font-black text-slate-200 uppercase tracking-widest">ID ${t.id}</span>
-                        <button onclick="openEditor(${t.id})" class="p-2.5 rounded-full bg-slate-50 text-slate-300 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-all font-bold text-[10px] uppercase">Ajustar</button>
+                        <button onclick="openEditor(${t.id})" class="p-2.5 rounded-full bg-slate-50 text-slate-300 hover:text-blue-600 opacity-0 group-hover:opacity-100 font-bold text-[10px] uppercase transition-all tracking-wider">Ajustar</button>
                     </div>
                     <div class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-black uppercase mb-8 border-2 ${t.date.includes('Lunes') || t.date.includes('Martes') ? 'bg-indigo-50 border-indigo-100 text-indigo-700' : 'bg-amber-50 border-amber-100 text-amber-700'}">● ${t.date}</div>
                     <h3 class="text-2xl font-black text-slate-900 mb-2 leading-tight">${t.app}</h3>
