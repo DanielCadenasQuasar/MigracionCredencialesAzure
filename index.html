@@ -88,17 +88,16 @@
         window.firestoreTools = { doc, setDoc, onSnapshot, collection, updateDoc };
         window.authTools = { sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signOut };
 
-        // Obtener la URL base limpia para evitar errores de redirección
-        const getBaseUrl = () => {
-            return window.location.origin + window.location.pathname;
+        // Obtener la URL exacta de la página para la redirección
+        const getCleanUrl = () => {
+            return window.location.href.split('#')[0].split('?')[0];
         };
 
         const actionCodeSettings = {
-            url: getBaseUrl(),
+            url: getCleanUrl(),
             handleCodeInApp: true,
         };
 
-        // Lógica para completar el inicio de sesión cuando se pulsa el enlace del correo
         const initSessionFromLink = async () => {
             if (isSignInWithEmailLink(auth, window.location.href)) {
                 let email = window.localStorage.getItem('emailForSignIn');
@@ -108,15 +107,14 @@
                 
                 if (!email || !email.toLowerCase().endsWith(AUTHORIZED_DOMAIN)) {
                     alert("Acceso denegado: Solo los correos con dominio @quasar.es están permitidos.");
-                    window.location.href = getBaseUrl();
+                    window.location.href = getCleanUrl();
                     return;
                 }
 
                 try {
                     await signInWithEmailLink(auth, email, window.location.href);
                     window.localStorage.removeItem('emailForSignIn');
-                    // Limpiar parámetros de Firebase de la URL
-                    window.history.replaceState({}, document.title, getBaseUrl());
+                    window.history.replaceState({}, document.title, getCleanUrl());
                 } catch (error) {
                     console.error("Error en Email Link:", error);
                     alert("El enlace ha expirado o ya ha sido utilizado.");
@@ -134,7 +132,6 @@
                     startApp();
                 }
             } else {
-                // Si el usuario existe pero no es del dominio, lo expulsamos
                 if (user) signOut(auth);
                 document.getElementById('auth-screen').classList.remove('hidden');
                 document.getElementById('main-dashboard').classList.add('hidden');
@@ -169,14 +166,17 @@
                 successEl.classList.remove('hidden');
                 btn.innerText = "Enviado con éxito";
             } catch (error) {
-                console.error("Firebase Error:", error.code, error.message);
+                console.error("Firebase Auth Error:", error.code, error.message);
                 btn.disabled = false;
-                btn.innerText = "Solicitar Enlace";
+                btn.innerText = "Solicitar Enlace de Acceso";
                 
-                if (error.code === "auth/unauthorized-domain") {
-                    errEl.innerText = "Error: Este dominio web no está autorizado en la consola de Firebase.";
-                } else if (error.code === "auth/operation-not-allowed") {
-                    errEl.innerText = "Error: El método 'Email Link' no está activado en Firebase Authentication.";
+                if (error.code === "auth/unauthorized-continue-uri") {
+                    const domain = window.location.hostname;
+                    errEl.innerHTML = `
+                        <strong>Error de Dominio No Autorizado</strong><br>
+                        Debes añadir <u>${domain}</u> a la lista de dominios autorizados en tu consola de Firebase:<br>
+                        <em>Authentication > Settings > Authorized domains</em>
+                    `;
                 } else {
                     errEl.innerText = "Error al conectar: " + error.message;
                 }
@@ -203,7 +203,7 @@
                     <input type="email" id="auth-email" required placeholder="ejemplo@quasar.es" class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-100 transition-all">
                 </div>
                 
-                <p id="auth-error" class="text-red-500 text-[10px] font-bold uppercase text-center hidden leading-relaxed"></p>
+                <div id="auth-error" class="bg-red-50 text-red-600 p-4 rounded-xl text-[10px] font-bold uppercase hidden leading-relaxed border border-red-100"></div>
                 <p id="auth-success" class="text-green-600 text-[10px] font-bold uppercase text-center hidden leading-relaxed"></p>
                 
                 <button type="submit" id="auth-submit-btn" class="w-full bg-blue-600 text-white font-bold py-5 rounded-2xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all transform active:scale-95">Solicitar Enlace de Acceso</button>
