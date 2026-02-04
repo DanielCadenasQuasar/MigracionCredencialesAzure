@@ -2,12 +2,12 @@
 <!-- Application Structure Plan: Dashboard corporativo con seguridad profesional integrada.
      1. Capa de Seguridad: Interfaz de login con Firebase Auth (Email/Password) gratuita.
      2. Dashboard Estratégico: Resumen de KPIs de migración.
-     3. Calendario Cronológico: Gestión de ventanas de producción L/M con diseño ultra-compacto y scroll horizontal.
+     3. Calendario Cronológico: Gestión de ventanas de producción L/M con diseño ultra-compacto y scroll horizontal forzado para alta densidad.
      4. Grid Técnico: Detalle granular con validación de los 4 pilares de Azure Identity.
-     Estructura optimizada para alta densidad de información y sincronización multi-dispositivo. -->
+     Estructura optimizada para máxima visibilidad de datos y sincronización multi-dispositivo. -->
 <!-- Visualization & Content Choices: 
      - Autenticación -> Formulario dinámico -> Seguridad gratuita profesional.
-     - Timeline -> Diseño de micro-tarjetas con scroll horizontal -> Maximizar visibilidad de fechas.
+     - Timeline -> Micro-columnas (190px) con scroll horizontal -> Maximizar densidad informativa.
      - Éxito Técnico -> Doughnut Chart (Chart.js).
      - Carga de Trabajo -> Stacked Bar Chart (Chart.js).
      - Iconografía -> Caracteres Unicode y CSS -> Cumplimiento de restricción NO SVG. -->
@@ -26,17 +26,18 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F8FAFC; scroll-behavior: smooth; }
         .chart-container { position: relative; width: 100%; max-width: 600px; margin: 0 auto; height: 280px; }
         
-        /* Configuración de scroll horizontal para el Timeline */
+        /* Configuración de scroll horizontal para el Timeline mejorada */
         .timeline-track { 
             display: flex; 
             overflow-x: auto; 
-            gap: 1rem; 
-            padding: 0.5rem; 
+            gap: 0.75rem; 
+            padding-bottom: 1rem;
             scroll-snap-type: x proximity;
             -webkit-overflow-scrolling: touch;
+            width: 100%;
         }
         
-        .timeline-track::-webkit-scrollbar { height: 6px; }
+        .timeline-track::-webkit-scrollbar { height: 5px; }
         .timeline-track::-webkit-scrollbar-track { background: #F1F5F9; border-radius: 10px; }
         .timeline-track::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
         .timeline-track::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
@@ -45,8 +46,13 @@
         .card-shadow { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04); transition: all 0.2s ease-in-out; }
         .card-shadow:hover { transform: translateY(-3px); box-shadow: 0 12px 25px -5px rgba(59, 130, 246, 0.1); }
         
-        /* Columnas de calendario más estrechas para ver más de una vez */
-        .timeline-column { min-width: 220px; max-width: 220px; scroll-snap-align: start; }
+        /* Columnas de calendario ultra-estrechas */
+        .timeline-column { 
+            min-width: 190px; 
+            max-width: 190px; 
+            flex-shrink: 0; /* Evita que las columnas se encojan y no permitan el scroll */
+            scroll-snap-align: start; 
+        }
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .login-gradient { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
@@ -169,17 +175,17 @@
                 </div>
             </section>
 
-            <!-- Sección: Timeline (Compacto y Desplazable) -->
+            <!-- Sección: Timeline (Ultra-Compacto y Desplazable) -->
             <section id="timeline" class="mb-20">
                 <div class="flex justify-between items-end mb-8">
                     <div>
                         <h2 class="text-3xl font-black text-slate-900 mb-2 tracking-tight">Planificación Temporal</h2>
-                        <p class="text-slate-500 text-sm font-medium">Hitos de subida a PROD (Lunes/Martes). Desliza para ver más.</p>
+                        <p class="text-slate-500 text-sm font-medium">Hitos de subida a PROD. Desliza hacia la derecha para ver futuras ventanas.</p>
                     </div>
                 </div>
                 <div class="bg-slate-100/50 rounded-[3rem] p-6 border border-slate-200/60 overflow-hidden">
-                    <div id="timeline-container" class="timeline-track no-scrollbar">
-                        <!-- Micro-cards dinámicas -->
+                    <div id="timeline-container" class="timeline-track">
+                        <!-- Micro-cards dinámicas con flex-shrink-0 -->
                     </div>
                 </div>
             </section>
@@ -347,23 +353,23 @@
                 const done = grp.filter(t => t.status === 'done').length;
                 const perc = Math.round((done / grp.length) * 100);
                 return `
-                    <div class="timeline-column flex flex-col gap-2.5">
-                        <div class="bg-white p-3.5 rounded-[1.5rem] border border-slate-100 shadow-sm relative overflow-hidden">
+                    <div class="timeline-column flex flex-col gap-2">
+                        <div class="bg-white p-3 rounded-[1.25rem] border border-slate-100 shadow-sm relative overflow-hidden">
                             <div class="absolute top-0 left-0 h-1 bg-blue-500/10 w-full"></div>
-                            <div class="text-[8px] font-black text-blue-600 uppercase mb-0.5">${date.split(' ')[0]}</div>
-                            <div class="text-[11px] font-black text-slate-800 truncate">${date.split(' ').slice(1).join(' ')}</div>
-                            <div class="w-full bg-slate-50 h-1 rounded-full mt-2 overflow-hidden">
+                            <div class="text-[7px] font-black text-blue-600 uppercase mb-0.5">${date.split(' ')[0]}</div>
+                            <div class="text-[10px] font-extrabold text-slate-800 truncate">${date.split(' ').slice(1).join(' ')}</div>
+                            <div class="w-full bg-slate-50 h-1 rounded-full mt-1.5 overflow-hidden">
                                 <div class="bg-blue-600 h-full transition-all duration-700" style="width: ${perc}%"></div>
                             </div>
                         </div>
                         <div class="flex flex-col gap-1.5">
                             ${grp.map(t => `
-                                <div onclick="openEditor(${t.id})" class="cursor-pointer group bg-white/70 p-2.5 rounded-xl border border-white hover:border-blue-100 card-shadow transition-all">
+                                <div onclick="openEditor(${t.id})" class="cursor-pointer group bg-white/70 p-2 rounded-xl border border-white hover:border-blue-100 card-shadow transition-all">
                                     <div class="flex justify-between items-center mb-1">
                                         <span class="text-[7px] font-black text-slate-400 uppercase truncate pr-1">${t.client}</span>
-                                        <div class="w-1.5 h-1.5 rounded-full ${t.status === 'done' ? 'bg-green-500' : 'bg-slate-200'}"></div>
+                                        <div class="w-1 h-1 rounded-full ${t.status === 'done' ? 'bg-green-500' : 'bg-slate-200'}"></div>
                                     </div>
-                                    <div class="text-[10px] font-bold text-slate-700 truncate leading-tight group-hover:text-blue-600">${t.app}</div>
+                                    <div class="text-[9px] font-bold text-slate-700 truncate leading-tight group-hover:text-blue-600">${t.app}</div>
                                 </div>
                             `).join('')}
                         </div>
@@ -394,7 +400,7 @@
                         ${renderCheck(t.id, 'redis', 'Redis Managed Creds', t.components.redis)}
                         ${renderCheck(t.id, 'keyvault', 'Key Vault Sync', t.components.keyvault)}
                     </div>
-                    <div class="pt-8 border-t border-slate-50 flex items-center gap-3">
+                    <div class="pt-8 border-t border-slate-100 flex items-center gap-3">
                         <div class="w-3.5 h-3.5 rounded-full ${t.status === 'done' ? 'bg-green-500 animate-pulse' : 'bg-slate-200'}"></div>
                         <span class="text-[11px] font-black uppercase tracking-[0.1em] ${t.status === 'done' ? 'text-green-600' : 'text-slate-400'}">${t.status === 'done' ? 'Validado para PROD' : 'Pendiente Validación'}</span>
                     </div>
