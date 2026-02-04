@@ -1,9 +1,9 @@
 <!-- Chosen Palette: Azure Pro (Cobalto Intenso, Gris Galáctico y Nieve) -->
-<!-- Application Structure Plan: Dashboard corporativo con seguridad profesional mediante restricción de dominio y Email Link.
-     1. Capa de Seguridad: Autenticación por enlace de correo restringida al dominio @quasar.es.
-     2. Dashboard Estratégico: Resumen de KPIs de migración y salud técnica.
-     3. Calendario Cronológico: Gestión de ventanas de producción L/M con tarjetas ampliadas (250px) y scroll horizontal.
-     4. Grid Técnico: Detalle granular con validación de los 4 pilares de Azure Identity. -->
+<!-- Application Structure Plan: Dashboard corporativo con seguridad híbrida profesional.
+     1. Capa de Seguridad: Autenticación por enlace (Passwordless) con fallback de contraseña para evitar bloqueos por cuota.
+     2. Restricción Quasar: Validación estricta del dominio @quasar.es en ambos métodos.
+     3. Dashboard Estratégico: Resumen de KPIs de migración.
+     4. Calendario Cronológico: Tarjetas de 250px con scroll horizontal fluido. -->
 <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 <!DOCTYPE html>
 <html lang="es">
@@ -19,7 +19,6 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F8FAFC; scroll-behavior: smooth; }
         .chart-container { position: relative; width: 100%; max-width: 600px; margin: 0 auto; height: 280px; }
         
-        /* Contenedor del Timeline con desplazamiento horizontal forzado */
         .timeline-track { 
             display: flex; 
             overflow-x: auto; 
@@ -40,13 +39,7 @@
         .card-shadow { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04); transition: all 0.2s ease-in-out; }
         .card-shadow:hover { transform: translateY(-3px); box-shadow: 0 12px 25px -5px rgba(59, 130, 246, 0.1); }
         
-        /* Tamaño de las columnas del calendario incrementado para legibilidad */
-        .timeline-column { 
-            min-width: 250px; 
-            max-width: 250px; 
-            flex-shrink: 0; 
-            scroll-snap-align: start; 
-        }
+        .timeline-column { min-width: 250px; max-width: 250px; flex-shrink: 0; scroll-snap-align: start; }
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .login-gradient { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
@@ -62,12 +55,12 @@
             sendSignInLinkToEmail, 
             isSignInWithEmailLink, 
             signInWithEmailLink, 
+            signInWithEmailAndPassword,
             onAuthStateChanged, 
             signOut 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- CONFIGURACIÓN DE SEGURIDAD (RESTRICCIÓN DE DOMINIO) ---
         const AUTHORIZED_DOMAIN = "@quasar.es";
 
         const firebaseConfig = {
@@ -86,27 +79,31 @@
         window.auth = auth;
         window.db = db;
         window.firestoreTools = { doc, setDoc, onSnapshot, collection, updateDoc };
-        window.authTools = { sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signOut };
+        window.authTools = { sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signInWithEmailAndPassword, signOut };
 
-        // Obtener la URL exacta de la página para la redirección
-        const getCleanUrl = () => {
-            return window.location.href.split('#')[0].split('?')[0];
-        };
+        const getCleanUrl = () => window.location.href.split('#')[0].split('?')[0];
 
-        const actionCodeSettings = {
-            url: getCleanUrl(),
-            handleCodeInApp: true,
+        // Lógica de validación de dominio compartida
+        const checkDomain = (email) => email && email.toLowerCase().endsWith(AUTHORIZED_DOMAIN);
+
+        // Cambiar entre modo enlace y modo contraseña
+        window.currentAuthMode = 'link'; 
+        window.toggleAuthMode = () => {
+            const mode = window.currentAuthMode === 'link' ? 'password' : 'link';
+            window.currentAuthMode = mode;
+            document.getElementById('password-field').classList.toggle('hidden', mode === 'link');
+            document.getElementById('auth-submit-btn').innerText = mode === 'link' ? 'Solicitar Enlace de Acceso' : 'Entrar con Contraseña';
+            document.getElementById('toggle-mode-text').innerText = mode === 'link' ? '¿Prefieres entrar con contraseña?' : '¿Prefieres entrar con enlace de correo?';
+            document.getElementById('auth-subtitle').innerText = mode === 'link' ? 'Identifícate con tu correo de Quasar para recibir un enlace.' : 'Introduce tu correo y contraseña corporativa.';
         };
 
         const initSessionFromLink = async () => {
             if (isSignInWithEmailLink(auth, window.location.href)) {
                 let email = window.localStorage.getItem('emailForSignIn');
-                if (!email) {
-                    email = window.prompt('Confirma tu correo de @quasar.es para completar el acceso:');
-                }
+                if (!email) email = window.prompt('Confirma tu correo de @quasar.es:');
                 
-                if (!email || !email.toLowerCase().endsWith(AUTHORIZED_DOMAIN)) {
-                    alert("Acceso denegado: Solo los correos con dominio @quasar.es están permitidos.");
+                if (!checkDomain(email)) {
+                    alert("Dominio no autorizado.");
                     window.location.href = getCleanUrl();
                     return;
                 }
@@ -116,14 +113,13 @@
                     window.localStorage.removeItem('emailForSignIn');
                     window.history.replaceState({}, document.title, getCleanUrl());
                 } catch (error) {
-                    console.error("Error en Email Link:", error);
-                    alert("El enlace ha expirado o ya ha sido utilizado.");
+                    alert("El enlace ha expirado.");
                 }
             }
         };
 
         onAuthStateChanged(auth, (user) => {
-            if (user && user.email.toLowerCase().endsWith(AUTHORIZED_DOMAIN)) {
+            if (user && checkDomain(user.email)) {
                 document.getElementById('auth-screen').classList.add('hidden');
                 document.getElementById('main-dashboard').classList.remove('hidden');
                 document.getElementById('user-email-display').innerText = user.email;
@@ -140,9 +136,10 @@
             }
         });
 
-        window.sendAccessLink = async (e) => {
+        window.handleAuthSubmit = async (e) => {
             e.preventDefault();
             const email = document.getElementById('auth-email').value.toLowerCase().trim();
+            const password = document.getElementById('auth-pass').value;
             const btn = document.getElementById('auth-submit-btn');
             const errEl = document.getElementById('auth-error');
             const successEl = document.getElementById('auth-success');
@@ -150,35 +147,37 @@
             errEl.classList.add('hidden');
             successEl.classList.add('hidden');
 
-            if (!email.endsWith(AUTHORIZED_DOMAIN)) {
-                errEl.innerText = "Error: Debes usar una dirección @quasar.es";
+            if (!checkDomain(email)) {
+                errEl.innerText = "Error: Solo se permiten correos @quasar.es";
                 errEl.classList.remove('hidden');
                 return;
             }
 
             btn.disabled = true;
-            btn.innerText = "Verificando...";
+            const originalText = btn.innerText;
+            btn.innerText = "Procesando...";
 
             try {
-                await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-                window.localStorage.setItem('emailForSignIn', email);
-                successEl.innerText = "¡Enlace enviado! Revisa tu bandeja de @quasar.es";
-                successEl.classList.remove('hidden');
-                btn.innerText = "Enviado con éxito";
-            } catch (error) {
-                console.error("Firebase Auth Error:", error.code, error.message);
-                btn.disabled = false;
-                btn.innerText = "Solicitar Enlace de Acceso";
-                
-                if (error.code === "auth/unauthorized-continue-uri") {
-                    const domain = window.location.hostname;
-                    errEl.innerHTML = `
-                        <strong>Error de Dominio No Autorizado</strong><br>
-                        Debes añadir <u>${domain}</u> a la lista de dominios autorizados en tu consola de Firebase:<br>
-                        <em>Authentication > Settings > Authorized domains</em>
-                    `;
+                if (window.currentAuthMode === 'link') {
+                    await sendSignInLinkToEmail(auth, email, { url: getCleanUrl(), handleCodeInApp: true });
+                    window.localStorage.setItem('emailForSignIn', email);
+                    successEl.innerText = "¡Enlace enviado! Revisa tu correo @quasar.es";
+                    successEl.classList.remove('hidden');
                 } else {
-                    errEl.innerText = "Error al conectar: " + error.message;
+                    await signInWithEmailAndPassword(auth, email, password);
+                }
+            } catch (error) {
+                console.error(error);
+                btn.disabled = false;
+                btn.innerText = originalText;
+                
+                if (error.code === "auth/quota-exceeded") {
+                    errEl.innerHTML = "<strong>Límite de correos alcanzado.</strong><br>Firebase ha agotado los envíos por hoy. Por favor, usa el acceso por contraseña.";
+                    if(window.currentAuthMode === 'link') setTimeout(window.toggleAuthMode, 2000);
+                } else if (error.code === "auth/invalid-credential" || error.code === "auth/user-not-found") {
+                    errEl.innerText = "Credenciales incorrectas.";
+                } else {
+                    errEl.innerText = "Error: " + error.message;
                 }
                 errEl.classList.remove('hidden');
             }
@@ -187,20 +186,25 @@
 </head>
 <body class="text-slate-900">
 
-    <!-- Pantalla de Autenticación (Restricción Quasar) -->
+    <!-- Pantalla de Autenticación Híbrida -->
     <div id="auth-screen" class="fixed inset-0 z-[200] login-gradient flex items-center justify-center p-6 hidden">
         <div class="bg-white w-full max-w-md rounded-[3rem] p-12 shadow-2xl overflow-hidden relative fade-in">
             <div class="absolute top-0 left-0 w-full h-2 bg-blue-600"></div>
             <div class="text-center mb-10">
                 <div class="bg-blue-50 w-16 h-16 rounded-2xl flex items-center justify-center text-blue-600 text-3xl font-black mx-auto mb-6">❖</div>
-                <h2 class="text-2xl font-black text-slate-900 tracking-tight">Acceso Corporativo</h2>
-                <p class="text-slate-400 text-sm mt-2 font-medium text-pretty">Identifícate con tu correo de Quasar para gestionar la migración.</p>
+                <h2 class="text-2xl font-black text-slate-900 tracking-tight">Acceso Quasar</h2>
+                <p id="auth-subtitle" class="text-slate-400 text-sm mt-2 font-medium">Identifícate con tu correo de Quasar para acceder.</p>
             </div>
 
-            <form id="auth-form" onsubmit="sendAccessLink(event)" class="space-y-5">
+            <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-5">
                 <div>
                     <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2">Correo de Quasar</label>
                     <input type="email" id="auth-email" required placeholder="ejemplo@quasar.es" class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-100 transition-all">
+                </div>
+
+                <div id="password-field" class="hidden">
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2">Contraseña</label>
+                    <input type="password" id="auth-pass" placeholder="••••••••" class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-100 transition-all">
                 </div>
                 
                 <div id="auth-error" class="bg-red-50 text-red-600 p-4 rounded-xl text-[10px] font-bold uppercase hidden leading-relaxed border border-red-100"></div>
@@ -209,8 +213,12 @@
                 <button type="submit" id="auth-submit-btn" class="w-full bg-blue-600 text-white font-bold py-5 rounded-2xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all transform active:scale-95">Solicitar Enlace de Acceso</button>
             </form>
 
+            <div class="mt-8 text-center">
+                <button onclick="toggleAuthMode()" id="toggle-mode-text" class="text-xs font-bold text-slate-400 hover:text-blue-600 transition-colors">¿Prefieres entrar con contraseña?</button>
+            </div>
+
             <div class="mt-8 pt-8 border-t border-slate-50 text-center">
-                <p class="text-[9px] font-bold text-slate-300 uppercase tracking-widest leading-loose">Acceso exclusivo para @quasar.es<br>Azure Infrastructure Strategy 2026</p>
+                <p class="text-[9px] font-bold text-slate-300 uppercase tracking-widest leading-loose">Solo acceso autorizado para @quasar.es<br>Azure Infrastructure Strategy 2026</p>
             </div>
         </div>
     </div>
