@@ -2,12 +2,12 @@
 <!-- Application Structure Plan: Dashboard corporativo con seguridad profesional integrada.
      1. Capa de Seguridad: Interfaz de login con Firebase Auth (Email/Password) gratuita.
      2. Dashboard Estratégico: Resumen de KPIs de migración.
-     3. Calendario Cronológico: Gestión de ventanas de producción L/M con diseño ultra-compacto y scroll horizontal forzado para alta densidad.
+     3. Calendario Cronológico: Gestión de ventanas de producción L/M con diseño optimizado y scroll horizontal forzado.
      4. Grid Técnico: Detalle granular con validación de los 4 pilares de Azure Identity.
      Estructura optimizada para máxima visibilidad de datos y sincronización multi-dispositivo. -->
 <!-- Visualization & Content Choices: 
      - Autenticación -> Formulario dinámico -> Seguridad gratuita profesional.
-     - Timeline -> Micro-columnas (190px) con scroll horizontal -> Maximizar densidad informativa.
+     - Timeline -> Columnas ampliadas (250px) con scroll horizontal -> Mejorar legibilidad.
      - Éxito Técnico -> Doughnut Chart (Chart.js).
      - Carga de Trabajo -> Stacked Bar Chart (Chart.js).
      - Iconografía -> Caracteres Unicode y CSS -> Cumplimiento de restricción NO SVG. -->
@@ -30,14 +30,14 @@
         .timeline-track { 
             display: flex; 
             overflow-x: auto; 
-            gap: 0.75rem; 
-            padding-bottom: 1rem;
+            gap: 1.25rem; 
+            padding-bottom: 1.5rem;
             scroll-snap-type: x proximity;
             -webkit-overflow-scrolling: touch;
             width: 100%;
         }
         
-        .timeline-track::-webkit-scrollbar { height: 5px; }
+        .timeline-track::-webkit-scrollbar { height: 6px; }
         .timeline-track::-webkit-scrollbar-track { background: #F1F5F9; border-radius: 10px; }
         .timeline-track::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
         .timeline-track::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
@@ -46,11 +46,11 @@
         .card-shadow { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04); transition: all 0.2s ease-in-out; }
         .card-shadow:hover { transform: translateY(-3px); box-shadow: 0 12px 25px -5px rgba(59, 130, 246, 0.1); }
         
-        /* Columnas de calendario ultra-estrechas */
+        /* Columnas de calendario con tamaño incrementado */
         .timeline-column { 
-            min-width: 220; 
-            max-width: 220; 
-            flex-shrink: 0; /* Evita que las columnas se encojan y no permitan el scroll */
+            min-width: 250px; 
+            max-width: 250px; 
+            flex-shrink: 0; 
             scroll-snap-align: start; 
         }
         
@@ -175,7 +175,7 @@
                 </div>
             </section>
 
-            <!-- Sección: Timeline (Ultra-Compacto y Desplazable) -->
+            <!-- Sección: Timeline (Desplazable con tamaño incrementado) -->
             <section id="timeline" class="mb-20">
                 <div class="flex justify-between items-end mb-8">
                     <div>
@@ -185,7 +185,7 @@
                 </div>
                 <div class="bg-slate-100/50 rounded-[3rem] p-6 border border-slate-200/60 overflow-hidden">
                     <div id="timeline-container" class="timeline-track">
-                        <!-- Micro-cards dinámicas con flex-shrink-0 -->
+                        <!-- Tarjetas dinámicas con flex-shrink-0 -->
                     </div>
                 </div>
             </section>
@@ -353,23 +353,23 @@
                 const done = grp.filter(t => t.status === 'done').length;
                 const perc = Math.round((done / grp.length) * 100);
                 return `
-                    <div class="timeline-column flex flex-col gap-2">
-                        <div class="bg-white p-3 rounded-[1.25rem] border border-slate-100 shadow-sm relative overflow-hidden">
+                    <div class="timeline-column flex flex-col gap-3">
+                        <div class="bg-white p-4 rounded-[1.5rem] border border-slate-100 shadow-sm relative overflow-hidden">
                             <div class="absolute top-0 left-0 h-1 bg-blue-500/10 w-full"></div>
-                            <div class="text-[7px] font-black text-blue-600 uppercase mb-0.5">${date.split(' ')[0]}</div>
-                            <div class="text-[10px] font-extrabold text-slate-800 truncate">${date.split(' ').slice(1).join(' ')}</div>
-                            <div class="w-full bg-slate-50 h-1 rounded-full mt-1.5 overflow-hidden">
+                            <div class="text-[9px] font-black text-blue-600 uppercase mb-0.5">${date.split(' ')[0]}</div>
+                            <div class="text-[13px] font-extrabold text-slate-800 truncate">${date.split(' ').slice(1).join(' ')}</div>
+                            <div class="w-full bg-slate-50 h-1.5 rounded-full mt-2.5 overflow-hidden">
                                 <div class="bg-blue-600 h-full transition-all duration-700" style="width: ${perc}%"></div>
                             </div>
                         </div>
-                        <div class="flex flex-col gap-1.5">
+                        <div class="flex flex-col gap-2">
                             ${grp.map(t => `
-                                <div onclick="openEditor(${t.id})" class="cursor-pointer group bg-white/70 p-2 rounded-xl border border-white hover:border-blue-100 card-shadow transition-all">
-                                    <div class="flex justify-between items-center mb-1">
-                                        <span class="text-[7px] font-black text-slate-400 uppercase truncate pr-1">${t.client}</span>
-                                        <div class="w-1 h-1 rounded-full ${t.status === 'done' ? 'bg-green-500' : 'bg-slate-200'}"></div>
+                                <div onclick="openEditor(${t.id})" class="cursor-pointer group bg-white/70 p-3.5 rounded-2xl border border-white hover:border-blue-100 card-shadow transition-all">
+                                    <div class="flex justify-between items-center mb-1.5">
+                                        <span class="text-[8px] font-black text-slate-400 uppercase truncate pr-1">${t.client}</span>
+                                        <div class="w-1.5 h-1.5 rounded-full ${t.status === 'done' ? 'bg-green-500' : 'bg-slate-200'}"></div>
                                     </div>
-                                    <div class="text-[9px] font-bold text-slate-700 truncate leading-tight group-hover:text-blue-600">${t.app}</div>
+                                    <div class="text-[11px] font-bold text-slate-700 leading-tight group-hover:text-blue-600">${t.app}</div>
                                 </div>
                             `).join('')}
                         </div>
@@ -412,6 +412,7 @@
 
         const renderCharts = () => {
             const done = stateTasks.filter(t => t.status === 'done').length;
+            const total = stateTasks.length;
             const perc = Math.round((done / stateTasks.length) * 100);
             document.getElementById('global-perc-display').innerText = `${perc}%`;
             const ctx1 = document.getElementById('statusDoughnut').getContext('2d');
@@ -454,4 +455,3 @@
     </script>
 </body>
 </html>
-
