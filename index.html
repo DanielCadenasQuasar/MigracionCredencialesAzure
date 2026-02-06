@@ -1,9 +1,9 @@
 <!-- Chosen Palette: Azure Pro (Cobalto Intenso, Gris Galáctico y Nieve) -->
 <!-- Application Structure Plan: Dashboard corporativo con sincronización inteligente y gestión por responsable.
      1. Capa de Seguridad: Autenticación Quasar (@quasar.es) por enlace o contraseña.
-     2. Navegación Multi-Vista: Alternancia entre vista estratégica general y vista táctica por persona.
+     2. Navegación Multi-Vista: Alternancia entre vista estratégica, vista por persona y protocolo de pruebas.
      3. Sincronización Automática: Detección de nuevos registros en el código y carga inmediata a la nube.
-     4. Vista de Equipo: Filtro por responsable con métricas individuales y listado de tareas pendientes. -->
+     4. Centro de Pruebas: Nueva sección con instrucciones detalladas para validación local y en portales. -->
 <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 <!DOCTYPE html>
 <html lang="es">
@@ -48,6 +48,11 @@
 
         .person-avatar { width: 48px; height: 48px; border-radius: 16px; display: flex; items-center; justify-content: center; font-weight: 800; font-size: 14px; transition: all 0.3s; cursor: pointer; border: 2px solid transparent; }
         .person-avatar.active { border-color: #2563eb; background-color: #2563eb !important; color: white !important; transform: scale(1.1); box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2); }
+    
+        .instruction-step { position: relative; padding-left: 3rem; margin-bottom: 2rem; }
+        .instruction-step::before { content: ""; position: absolute; left: 1rem; top: 0; bottom: -2rem; width: 2px; background: #E2E8F0; }
+        .instruction-step:last-child::before { display: none; }
+        .step-number { position: absolute; left: 0; top: 0; width: 2rem; height: 2rem; background: #2563eb; color: white; border-radius: 8px; display: flex; items-center; justify-content: center; font-weight: 800; font-size: 12px; z-index: 10; }
     </style>
 
     <script type="module">
@@ -210,13 +215,14 @@
                 <div class="flex items-center gap-8">
                     <div class="flex items-center gap-3">
                         <div class="bg-blue-600 w-11 h-11 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-blue-200">❖</div>
-                        <h1 class="text-lg font-extrabold tracking-tight hidden sm:block">Identity Hub</h1>
+                        <h1 class="text-lg font-extrabold tracking-tight hidden lg:block">Identity Hub</h1>
                     </div>
                     
                     <!-- Navegación de Vistas -->
                     <nav class="flex bg-slate-100 p-1.5 rounded-2xl">
-                        <button onclick="switchView('general')" id="btn-view-general" class="px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all bg-white text-blue-600 shadow-sm">Vista General</button>
-                        <button onclick="switchView('personal')" id="btn-view-personal" class="px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all text-slate-400 hover:text-slate-600">Vista de Equipo</button>
+                        <button onclick="switchView('general')" id="btn-view-general" class="px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all bg-white text-blue-600 shadow-sm">Vista General</button>
+                        <button onclick="switchView('personal')" id="btn-view-personal" class="px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all text-slate-400 hover:text-slate-600">Vista de Equipo</button>
+                        <button onclick="switchView('instructions')" id="btn-view-instructions" class="px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all text-slate-400 hover:text-slate-600">Protocolo de Pruebas</button>
                     </nav>
                 </div>
 
@@ -285,6 +291,69 @@
                     <div id="personal-tasks-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                         <div class="col-span-full text-center py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
                             <p class="text-slate-400 font-bold uppercase tracking-widest text-[11px]">Selecciona una persona para comenzar</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- VISTA DE INSTRUCCIONES DE PRUEBAS -->
+            <div id="view-instructions" class="hidden">
+                <section class="max-w-4xl mx-auto">
+                    <h2 class="text-3xl font-black text-slate-900 mb-4 tracking-tight">Protocolo de Validación Técnica</h2>
+                    <p class="text-slate-500 mb-12 font-medium leading-relaxed text-pretty">Directrices obligatorias para asegurar que la migración de identidades y secretos se ha ejecutado correctamente en todos los entornos.</p>
+                    
+                    <div class="space-y-4">
+                        <!-- Entorno LocalHost -->
+                        <div class="bg-white rounded-[2.5rem] p-10 card-shadow border border-slate-100 flex flex-col md:flex-row gap-8">
+                            <div class="bg-blue-50 w-16 h-16 rounded-2xl flex items-center justify-center text-blue-600 text-2xl font-black shrink-0">💻</div>
+                            <div>
+                                <h3 class="text-xl font-black text-slate-900 mb-3">Entorno Local (LocalHost)</h3>
+                                <p class="text-sm text-slate-600 leading-relaxed mb-6">Al ejecutar desde Visual Studio, la autenticación depende de la cuenta vinculada al IDE.</p>
+                                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Requisito Crítico</p>
+                                    <p class="text-sm font-bold text-slate-700">Verificar siempre la cuenta seleccionada en <span class="text-blue-600">Azure Service Authentication</span>. Debe coincidir con la identidad del entorno seleccionado (Quasar o QsrTech) para cargar los secretos del Key Vault correctamente.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Portales y API -->
+                        <div class="bg-white rounded-[2.5rem] p-10 card-shadow border border-slate-100 flex flex-col md:flex-row gap-8">
+                            <div class="bg-indigo-50 w-16 h-16 rounded-2xl flex items-center justify-center text-indigo-600 text-2xl font-black shrink-0">🌐</div>
+                            <div>
+                                <h3 class="text-xl font-black text-slate-900 mb-3">Ejecución de Tests en Portales y API</h3>
+                                <p class="text-sm text-slate-600 leading-relaxed mb-6">Se han habilitado endpoints específicos para validar la conectividad con SQL, Storage y Redis mediante Identity.</p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                                        <p class="text-[9px] font-black text-slate-400 uppercase mb-2">Portales Web</p>
+                                        <p class="text-xs font-bold text-slate-700">Acceder a la ruta: <br><span class="text-blue-600 font-mono">/Admin/ConnectionTest</span></p>
+                                    </div>
+                                    <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                                        <p class="text-[9px] font-black text-slate-400 uppercase mb-2">API Services</p>
+                                        <p class="text-xs font-bold text-slate-700">Revisar el apartado <br><span class="text-indigo-600 font-mono">ConnectionTest</span> en Swagger.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Implementación Técnica -->
+                        <div class="bg-white rounded-[2.5rem] p-10 card-shadow border border-slate-100 flex flex-col md:flex-row gap-8">
+                            <div class="bg-amber-50 w-16 h-16 rounded-2xl flex items-center justify-center text-amber-600 text-2xl font-black shrink-0">⚙️</div>
+                            <div>
+                                <h3 class="text-xl font-black text-slate-900 mb-3">Implementación de Nuevos Tests</h3>
+                                <p class="text-sm text-slate-600 leading-relaxed mb-6">Para añadir nuevas validaciones durante el desarrollo local:</p>
+                                <div class="bg-amber-50/50 p-6 rounded-2xl border border-amber-100 border-dashed">
+                                    <ul class="space-y-3">
+                                        <li class="flex gap-3 text-xs font-bold text-amber-900">
+                                            <span class="text-amber-500">•</span>
+                                            Revisar la clase del código para generar el endpoint correspondiente.
+                                        </li>
+                                        <li class="flex gap-3 text-xs font-bold text-amber-900">
+                                            <span class="text-amber-500">•</span>
+                                            Añadir el botón de ejecución en la vista <span class="text-slate-900 font-mono">ConnectionTest.razor</span> del portal.
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -392,7 +461,7 @@
                 renderFilters();
                 renderTimeline();
                 renderGrid();
-            } else {
+            } else if (currentViewMode === 'personal') {
                 renderTeamSelectors();
                 renderPersonalTasks();
             }
@@ -402,18 +471,18 @@
             currentViewMode = view;
             document.getElementById('view-general').classList.toggle('hidden', view !== 'general');
             document.getElementById('view-personal').classList.toggle('hidden', view !== 'personal');
+            document.getElementById('view-instructions').classList.toggle('hidden', view !== 'instructions');
             
-            // Estilos botones cabecera
             const btnGen = document.getElementById('btn-view-general');
             const btnPers = document.getElementById('btn-view-personal');
+            const btnInst = document.getElementById('btn-view-instructions');
             
-            if (view === 'general') {
-                btnGen.className = "px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all bg-white text-blue-600 shadow-sm";
-                btnPers.className = "px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all text-slate-400 hover:text-slate-600";
-            } else {
-                btnPers.className = "px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all bg-white text-blue-600 shadow-sm";
-                btnGen.className = "px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all text-slate-400 hover:text-slate-600";
-            }
+            [btnGen, btnPers, btnInst].forEach(b => b.className = "px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all text-slate-400 hover:text-slate-600");
+            
+            if (view === 'general') btnGen.className = "px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all bg-white text-blue-600 shadow-sm";
+            if (view === 'personal') btnPers.className = "px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all bg-white text-blue-600 shadow-sm";
+            if (view === 'instructions') btnInst.className = "px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all bg-white text-blue-600 shadow-sm";
+            
             renderUI();
         };
 
@@ -453,7 +522,7 @@
                                 <div onclick="openEditor(${t.id})" class="cursor-pointer group bg-white/70 p-3.5 rounded-2xl border border-white hover:border-blue-100 card-shadow transition-all">
                                     <div class="flex justify-between items-center mb-1.5">
                                         <span class="text-[8px] font-black text-slate-400 uppercase truncate pr-1">${t.client}</span>
-                                        <div class="w-1.5 h-1.5 rounded-full ${t.status === 'done' ? 'bg-green-500' : 'bg-slate-200'}"></div>
+                                        <div class="w-1.5 h-1.5 rounded-full ${t.status === 'done' ? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.3)]' : 'bg-slate-200'}"></div>
                                     </div>
                                     <div class="text-[11px] font-bold text-slate-700 leading-tight group-hover:text-blue-600">${t.app}</div>
                                 </div>
@@ -471,10 +540,9 @@
             grid.innerHTML = items.map(t => renderTaskCard(t)).join('');
         };
 
-        // --- VISTA DE EQUIPO LOGIC ---
-
         const renderTeamSelectors = () => {
             const container = document.getElementById('person-selector');
+            if(!container) return;
             const people = [...new Set(stateTasks.map(t => t.responsible))].sort();
             
             container.innerHTML = people.map(p => {
@@ -507,7 +575,7 @@
 
         const renderPersonalTasks = () => {
             const container = document.getElementById('personal-tasks-container');
-            if (!selectedPerson) return;
+            if (!selectedPerson || !container) return;
             
             const myTasks = stateTasks.filter(t => t.responsible === selectedPerson);
             container.innerHTML = myTasks.map(t => renderTaskCard(t)).join('');
@@ -526,7 +594,7 @@
                 ${currentViewMode === 'general' ? `
                 <div class="flex items-center gap-4 bg-slate-50/50 p-4 rounded-2xl mb-12 border border-slate-50">
                     <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black text-xs">${t.responsible.split(' ').map(n => n[0]).join('')}</div>
-                    <div><p class="text-[9px] font-black text-slate-300 uppercase leading-none mb-1">Encargado</p><span class="text-sm font-extrabold text-slate-700 tracking-tight">${t.responsible}</span></div>
+                    <div><p class="text-[9px] font-black text-slate-300 uppercase leading-none mb-1">Encargado</p><span class="text-sm font-extrabold text-slate-700 tracking-tight text-pretty">${t.responsible}</span></div>
                 </div>` : ''}
 
                 <div class="space-y-4 mb-10">
@@ -547,9 +615,9 @@
         const renderCharts = () => {
             const done = stateTasks.filter(t => t.status === 'done').length;
             const perc = stateTasks.length > 0 ? Math.round((done / stateTasks.length) * 100) : 0;
-            document.getElementById('global-perc-display').innerText = `${perc}%`;
+            const globalPercDisplay = document.getElementById('global-perc-display');
+            if(globalPercDisplay) globalPercDisplay.innerText = `${perc}%`;
             
-            // Solo renderizar si los contenedores existen y son visibles
             if (currentViewMode === 'general') {
                 const ctx1 = document.getElementById('statusDoughnut')?.getContext('2d');
                 const ctx2 = document.getElementById('clientBarChart')?.getContext('2d');
