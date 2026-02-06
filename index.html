@@ -1,9 +1,9 @@
 <!-- Chosen Palette: Azure Pro (Cobalto Intenso, Gris Galáctico y Nieve) -->
-<!-- Application Structure Plan: Dashboard corporativo con sincronización inteligente.
+<!-- Application Structure Plan: Dashboard corporativo con sincronización inteligente y gestión por responsable.
      1. Capa de Seguridad: Autenticación Quasar (@quasar.es) por enlace o contraseña.
-     2. Sincronización Automática: El sistema detecta nuevos registros en el código y los sube a la nube automáticamente.
-     3. Dashboard Estratégico: KPIs de éxito y carga por cliente.
-     4. Calendario Cronológico: Tarjetas ampliadas (250px) con scroll horizontal fluido. -->
+     2. Navegación Multi-Vista: Alternancia entre vista estratégica general y vista táctica por persona.
+     3. Sincronización Automática: Detección de nuevos registros en el código y carga inmediata a la nube.
+     4. Vista de Equipo: Filtro por responsable con métricas individuales y listado de tareas pendientes. -->
 <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 <!DOCTYPE html>
 <html lang="es">
@@ -45,6 +45,9 @@
         
         .fade-in { animation: fadeIn 0.4s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .person-avatar { width: 48px; height: 48px; border-radius: 16px; display: flex; items-center; justify-content: center; font-weight: 800; font-size: 14px; transition: all 0.3s; cursor: pointer; border: 2px solid transparent; }
+        .person-avatar.active { border-color: #2563eb; background-color: #2563eb !important; color: white !important; transform: scale(1.1); box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2); }
     </style>
 
     <script type="module">
@@ -171,6 +174,7 @@
 </head>
 <body class="text-slate-900">
 
+    <!-- Pantalla de Autenticación -->
     <div id="auth-screen" class="fixed inset-0 z-[200] login-gradient flex items-center justify-center p-6 hidden">
         <div class="bg-white w-full max-w-md rounded-[3rem] p-12 shadow-2xl overflow-hidden relative fade-in">
             <div class="absolute top-0 left-0 w-full h-2 bg-blue-600"></div>
@@ -199,18 +203,23 @@
         </div>
     </div>
 
+    <!-- Dashboard Principal -->
     <div id="main-dashboard" class="hidden">
         <header class="sticky top-0 z-50 border-b border-slate-200 glass-nav">
             <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <div class="bg-blue-600 w-11 h-11 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-blue-200">❖</div>
-                    <div>
-                        <h1 class="text-lg font-extrabold tracking-tight">Identity Hub</h1>
-                        <div class="flex items-center gap-1.5 text-[10px] font-bold text-green-500 uppercase tracking-widest">
-                            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Quasar Auth
-                        </div>
+                <div class="flex items-center gap-8">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-blue-600 w-11 h-11 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-blue-200">❖</div>
+                        <h1 class="text-lg font-extrabold tracking-tight hidden sm:block">Identity Hub</h1>
                     </div>
+                    
+                    <!-- Navegación de Vistas -->
+                    <nav class="flex bg-slate-100 p-1.5 rounded-2xl">
+                        <button onclick="switchView('general')" id="btn-view-general" class="px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all bg-white text-blue-600 shadow-sm">Vista General</button>
+                        <button onclick="switchView('personal')" id="btn-view-personal" class="px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all text-slate-400 hover:text-slate-600">Vista de Equipo</button>
+                    </nav>
                 </div>
+
                 <div class="flex items-center gap-8">
                     <div class="hidden lg:block text-right border-r border-slate-100 pr-8">
                         <p id="user-email-display" class="text-[11px] font-black text-slate-800 lowercase mb-1"></p>
@@ -225,39 +234,62 @@
         </header>
 
         <main class="max-w-7xl mx-auto px-6 py-12">
-            <section id="analytics" class="mb-20">
-                <h2 class="text-3xl font-black text-slate-900 mb-10 tracking-tight">Resumen Ejecutivo</h2>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                    <div class="bg-white p-10 rounded-[3rem] card-shadow border border-slate-100 flex flex-col">
-                        <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-10 text-center">Éxito de Validación</h3>
-                        <div class="chart-container flex-grow"><canvas id="statusDoughnut"></canvas></div>
+            
+            <!-- VISTA GENERAL -->
+            <div id="view-general">
+                <section id="analytics" class="mb-20">
+                    <h2 class="text-3xl font-black text-slate-900 mb-10 tracking-tight">Resumen Ejecutivo</h2>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                        <div class="bg-white p-10 rounded-[3rem] card-shadow border border-slate-100 flex flex-col">
+                            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-10 text-center">Éxito de Validación</h3>
+                            <div class="chart-container flex-grow"><canvas id="statusDoughnut"></canvas></div>
+                        </div>
+                        <div class="bg-white p-10 rounded-[3rem] card-shadow border border-slate-100 flex flex-col">
+                            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-10 text-center">Avance por Cliente</h3>
+                            <div class="chart-container flex-grow"><canvas id="clientBarChart"></canvas></div>
+                        </div>
                     </div>
-                    <div class="bg-white p-10 rounded-[3rem] card-shadow border border-slate-100 flex flex-col">
-                        <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-10 text-center">Avance por Cliente</h3>
-                        <div class="chart-container flex-grow"><canvas id="clientBarChart"></canvas></div>
-                    </div>
-                </div>
-            </section>
+                </section>
 
-            <section id="timeline" class="mb-20">
-                <h2 class="text-3xl font-black text-slate-900 mb-6 tracking-tight">Planificación Temporal</h2>
-                <div class="bg-slate-100/50 rounded-[3rem] p-6 border border-slate-200/60 overflow-hidden relative">
-                    <div id="timeline-container" class="timeline-track"></div>
-                </div>
-            </section>
-
-            <section id="execution">
-                <h2 class="text-3xl font-black text-slate-900 mb-10 tracking-tight">Detalle de Ejecución</h2>
-                <nav class="sticky top-24 z-40 overflow-x-auto no-scrollbar py-6 -mx-6 px-6 bg-slate-50/80 backdrop-blur-sm mb-10">
-                    <div class="flex gap-3" id="filter-bar"></div>
-                </nav>
-                <div id="grid-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 mt-10">
-                    <div id="loader" class="col-span-full py-40 flex flex-col items-center">
-                        <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                        <p class="mt-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Sincronizando datos...</p>
+                <section id="timeline" class="mb-20">
+                    <h2 class="text-3xl font-black text-slate-900 mb-6 tracking-tight">Planificación Temporal</h2>
+                    <div class="bg-slate-100/50 rounded-[3rem] p-6 border border-slate-200/60 overflow-hidden relative">
+                        <div id="timeline-container" class="timeline-track"></div>
                     </div>
-                </div>
-            </section>
+                </section>
+
+                <section id="execution">
+                    <h2 class="text-3xl font-black text-slate-900 mb-10 tracking-tight">Detalle de Ejecución</h2>
+                    <nav class="sticky top-24 z-40 overflow-x-auto no-scrollbar py-6 -mx-6 px-6 bg-slate-50/80 backdrop-blur-sm mb-10">
+                        <div class="flex gap-3" id="filter-bar"></div>
+                    </nav>
+                    <div id="grid-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 mt-10">
+                        <div id="loader" class="col-span-full py-40 flex flex-col items-center">
+                            <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                            <p class="mt-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Sincronizando datos...</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- VISTA POR PERSONA -->
+            <div id="view-personal" class="hidden">
+                <section class="mb-20">
+                    <h2 class="text-3xl font-black text-slate-900 mb-4 tracking-tight">Gestión por Responsable</h2>
+                    <p class="text-slate-500 mb-10 font-medium">Selecciona un miembro del equipo para ver sus tareas pendientes.</p>
+                    
+                    <div id="person-selector" class="flex flex-wrap gap-4 mb-16">
+                        <!-- Generado dinámicamente -->
+                    </div>
+
+                    <div id="personal-tasks-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                        <div class="col-span-full text-center py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
+                            <p class="text-slate-400 font-bold uppercase tracking-widest text-[11px]">Selecciona una persona para comenzar</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
         </main>
     </div>
 
@@ -313,6 +345,8 @@
 
         let stateTasks = [];
         let filter = "TODOS";
+        let selectedPerson = null;
+        let currentViewMode = 'general';
         let chartInstances = { doughnut: null, bar: null, header: null };
 
         const tryISO = (str) => {
@@ -326,7 +360,6 @@
             } catch(e) { return ""; }
         };
 
-        // --- Lógica de Sincronización Inteligente ---
         window.startApp = () => {
             const { onSnapshot, collection, doc, setDoc, getDoc } = window.firestoreTools;
             const collectionRef = collection(window.db, 'migrationTasks');
@@ -334,17 +367,14 @@
             onSnapshot(collectionRef, async (snap) => {
                 const cloudTasks = snap.docs.map(d => d.data());
                 
-                // Si la nube está vacía, inicializar todo
                 if (snap.empty) {
                     const init = SOURCE_REPORT.map(t => ({ ...t, status: 'pending', components: { sql: false, storage: false, redis: false, keyvault: false } }));
                     stateTasks = init;
                     init.forEach(task => setDoc(doc(window.db, 'migrationTasks', task.id.toString()), task));
                 } else {
-                    // Comparar SOURCE_REPORT con la nube para detectar IDs nuevos añadidos en el código
                     for (const localTask of SOURCE_REPORT) {
                         const exists = cloudTasks.some(ct => ct.id === localTask.id);
                         if (!exists) {
-                            console.log("Detectado nuevo ID en código:", localTask.id, ". Subiendo a la nube...");
                             const newTask = { ...localTask, status: 'pending', components: { sql: false, storage: false, redis: false, keyvault: false } };
                             await setDoc(doc(window.db, 'migrationTasks', localTask.id.toString()), newTask);
                         }
@@ -357,14 +387,39 @@
 
         const renderUI = () => {
             document.getElementById('loader')?.remove();
-            renderFilters();
-            renderTimeline();
-            renderGrid();
             renderCharts();
+            if (currentViewMode === 'general') {
+                renderFilters();
+                renderTimeline();
+                renderGrid();
+            } else {
+                renderTeamSelectors();
+                renderPersonalTasks();
+            }
+        };
+
+        window.switchView = (view) => {
+            currentViewMode = view;
+            document.getElementById('view-general').classList.toggle('hidden', view !== 'general');
+            document.getElementById('view-personal').classList.toggle('hidden', view !== 'personal');
+            
+            // Estilos botones cabecera
+            const btnGen = document.getElementById('btn-view-general');
+            const btnPers = document.getElementById('btn-view-personal');
+            
+            if (view === 'general') {
+                btnGen.className = "px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all bg-white text-blue-600 shadow-sm";
+                btnPers.className = "px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all text-slate-400 hover:text-slate-600";
+            } else {
+                btnPers.className = "px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all bg-white text-blue-600 shadow-sm";
+                btnGen.className = "px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all text-slate-400 hover:text-slate-600";
+            }
+            renderUI();
         };
 
         const renderFilters = () => {
             const container = document.getElementById('filter-bar');
+            if(!container) return;
             const clients = ["TODOS", ...new Set(SOURCE_REPORT.map(t => t.client))];
             container.innerHTML = clients.map(c => `
                 <button onclick="setFilter('${c}')" class="px-8 py-3 rounded-2xl text-[11px] font-black transition-all border-2 ${filter === c ? 'bg-slate-900 border-slate-900 text-white shadow-xl translate-y-[-2px]' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-300'}">
@@ -375,6 +430,7 @@
 
         const renderTimeline = () => {
             const container = document.getElementById('timeline-container');
+            if(!container) return;
             const datesMap = {};
             stateTasks.forEach(t => { if(!datesMap[t.date]) datesMap[t.date] = []; datesMap[t.date].push(t); });
             const sorted = Object.keys(datesMap).sort((a,b) => (tryISO(a) ? new Date(tryISO(a)).getTime() : 0) - (tryISO(b) ? new Date(tryISO(b)).getTime() : 0));
@@ -397,7 +453,7 @@
                                 <div onclick="openEditor(${t.id})" class="cursor-pointer group bg-white/70 p-3.5 rounded-2xl border border-white hover:border-blue-100 card-shadow transition-all">
                                     <div class="flex justify-between items-center mb-1.5">
                                         <span class="text-[8px] font-black text-slate-400 uppercase truncate pr-1">${t.client}</span>
-                                        <div class="w-1.5 h-1.5 rounded-full ${t.status === 'done' ? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.3)]' : 'bg-slate-200'}"></div>
+                                        <div class="w-1.5 h-1.5 rounded-full ${t.status === 'done' ? 'bg-green-500' : 'bg-slate-200'}"></div>
                                     </div>
                                     <div class="text-[11px] font-bold text-slate-700 leading-tight group-hover:text-blue-600">${t.app}</div>
                                 </div>
@@ -410,33 +466,81 @@
 
         const renderGrid = () => {
             const grid = document.getElementById('grid-container');
+            if(!grid) return;
             const items = filter === "TODOS" ? stateTasks : stateTasks.filter(t => t.client === filter);
-            grid.innerHTML = items.map(t => `
-                <div class="bg-white rounded-[3rem] p-10 card-shadow border border-slate-100 relative group">
-                    <div class="flex justify-between items-start mb-8">
-                        <span class="text-[10px] font-black text-slate-200 uppercase tracking-widest">ID ${t.id}</span>
-                        <button onclick="openEditor(${t.id})" class="p-2.5 rounded-full bg-slate-50 text-slate-300 hover:text-blue-600 opacity-0 group-hover:opacity-100 font-bold text-[10px] uppercase transition-all tracking-wider">Ajustar</button>
-                    </div>
-                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-black uppercase mb-8 border-2 ${t.date.includes('Lunes') || t.date.includes('Martes') ? 'bg-indigo-50 border-indigo-100 text-indigo-700' : 'bg-amber-50 border-amber-100 text-amber-700'}">● ${t.date}</div>
-                    <h3 class="text-2xl font-black text-slate-900 mb-2 leading-tight">${t.app}</h3>
-                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-10">${t.client}</p>
-                    <div class="flex items-center gap-4 bg-slate-50/50 p-4 rounded-2xl mb-12 border border-slate-50">
-                        <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black text-xs">${t.responsible.split(' ').map(n => n[0]).join('')}</div>
-                        <div><p class="text-[9px] font-black text-slate-300 uppercase leading-none mb-1">Encargado</p><span class="text-sm font-extrabold text-slate-700 tracking-tight">${t.responsible}</span></div>
-                    </div>
-                    <div class="space-y-4 mb-10">
-                        ${renderCheck(t.id, 'sql', 'SQL Identity Auth', t.components.sql)}
-                        ${renderCheck(t.id, 'storage', 'Azure Storage Auth', t.components.storage)}
-                        ${renderCheck(t.id, 'redis', 'Redis Managed identity', t.components.redis)}
-                        ${renderCheck(t.id, 'keyvault', 'Key Vault Sync secrets', t.components.keyvault)}
-                    </div>
-                    <div class="pt-8 border-t border-slate-100 flex items-center gap-3">
-                        <div class="w-3.5 h-3.5 rounded-full ${t.status === 'done' ? 'bg-green-500 animate-pulse' : 'bg-slate-200'}"></div>
-                        <span class="text-[11px] font-black uppercase tracking-[0.1em] ${t.status === 'done' ? 'text-green-600' : 'text-slate-400'}">${t.status === 'done' ? 'Validado para PROD' : 'Pendiente Validación'}</span>
-                    </div>
-                </div>
-            `).join('');
+            grid.innerHTML = items.map(t => renderTaskCard(t)).join('');
         };
+
+        // --- VISTA DE EQUIPO LOGIC ---
+
+        const renderTeamSelectors = () => {
+            const container = document.getElementById('person-selector');
+            const people = [...new Set(stateTasks.map(t => t.responsible))].sort();
+            
+            container.innerHTML = people.map(p => {
+                const tasksForP = stateTasks.filter(t => t.responsible === p);
+                const pending = tasksForP.filter(t => t.status !== 'done').length;
+                const initials = p.split(' ').map(n => n[0]).join('');
+                const isActive = selectedPerson === p;
+                
+                return `
+                    <div onclick="selectPerson('${p}')" class="flex items-center gap-4 bg-white p-4 rounded-3xl card-shadow border border-slate-100 cursor-pointer hover:border-blue-200 transition-all ${isActive ? 'ring-2 ring-blue-500 ring-offset-2' : ''}">
+                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm ${isActive ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'}">
+                            ${initials}
+                        </div>
+                        <div>
+                            <p class="text-sm font-black text-slate-800 leading-none mb-1">${p}</p>
+                            <p class="text-[10px] font-bold uppercase tracking-widest ${pending > 0 ? 'text-amber-500' : 'text-green-500'}">
+                                ${pending > 0 ? pending + ' pdte' : 'Completado'}
+                            </p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        window.selectPerson = (p) => {
+            selectedPerson = p;
+            renderTeamSelectors();
+            renderPersonalTasks();
+        };
+
+        const renderPersonalTasks = () => {
+            const container = document.getElementById('personal-tasks-container');
+            if (!selectedPerson) return;
+            
+            const myTasks = stateTasks.filter(t => t.responsible === selectedPerson);
+            container.innerHTML = myTasks.map(t => renderTaskCard(t)).join('');
+        };
+
+        const renderTaskCard = (t) => `
+            <div class="bg-white rounded-[3rem] p-10 card-shadow border border-slate-100 relative group fade-in">
+                <div class="flex justify-between items-start mb-8">
+                    <span class="text-[10px] font-black text-slate-200 uppercase tracking-widest">ID ${t.id}</span>
+                    <button onclick="openEditor(${t.id})" class="p-2.5 rounded-full bg-slate-50 text-slate-300 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-all font-bold text-[10px] uppercase">Ajustar</button>
+                </div>
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-black uppercase mb-8 border-2 ${t.date.includes('Lunes') || t.date.includes('Martes') ? 'bg-indigo-50 border-indigo-100 text-indigo-700' : 'bg-amber-50 border-amber-100 text-amber-700'}">● ${t.date}</div>
+                <h3 class="text-2xl font-black text-slate-900 mb-2 leading-tight">${t.app}</h3>
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-10">${t.client}</p>
+                
+                ${currentViewMode === 'general' ? `
+                <div class="flex items-center gap-4 bg-slate-50/50 p-4 rounded-2xl mb-12 border border-slate-50">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black text-xs">${t.responsible.split(' ').map(n => n[0]).join('')}</div>
+                    <div><p class="text-[9px] font-black text-slate-300 uppercase leading-none mb-1">Encargado</p><span class="text-sm font-extrabold text-slate-700 tracking-tight">${t.responsible}</span></div>
+                </div>` : ''}
+
+                <div class="space-y-4 mb-10">
+                    ${renderCheck(t.id, 'sql', 'SQL Identity Auth', t.components.sql)}
+                    ${renderCheck(t.id, 'storage', 'Azure Storage Auth', t.components.storage)}
+                    ${renderCheck(t.id, 'redis', 'Redis Managed identity', t.components.redis)}
+                    ${renderCheck(t.id, 'keyvault', 'Key Vault Sync secrets', t.components.keyvault)}
+                </div>
+                <div class="pt-8 border-t border-slate-100 flex items-center gap-3">
+                    <div class="w-3.5 h-3.5 rounded-full ${t.status === 'done' ? 'bg-green-500 animate-pulse' : 'bg-slate-200'}"></div>
+                    <span class="text-[11px] font-black uppercase tracking-[0.1em] ${t.status === 'done' ? 'text-green-600' : 'text-slate-400'}">${t.status === 'done' ? 'Validado para PROD' : 'Pendiente Validación'}</span>
+                </div>
+            </div>
+        `;
 
         const renderCheck = (id, k, l, a) => `<button onclick="togglePillar(${id},'${k}')" class="w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all ${a ? 'bg-blue-50 border-blue-100 text-blue-700 shadow-sm' : 'bg-white border-slate-50 text-slate-300 hover:border-slate-200'}"><span class="text-[12px] font-black tracking-tight text-left">${l}</span><span class="text-xl font-black">${a ? '●' : '○'}</span></button>`;
 
@@ -444,25 +548,36 @@
             const done = stateTasks.filter(t => t.status === 'done').length;
             const perc = stateTasks.length > 0 ? Math.round((done / stateTasks.length) * 100) : 0;
             document.getElementById('global-perc-display').innerText = `${perc}%`;
-            const ctx1 = document.getElementById('statusDoughnut').getContext('2d');
-            const ctx2 = document.getElementById('clientBarChart').getContext('2d');
-            const ctx3 = document.getElementById('headerRadialChart').getContext('2d');
-            if (chartInstances.doughnut) chartInstances.doughnut.destroy();
-            if (chartInstances.bar) chartInstances.bar.destroy();
-            if (chartInstances.header) chartInstances.header.destroy();
-            chartInstances.doughnut = new Chart(ctx1, { type: 'doughnut', data: { labels: ['Validadas', 'Pdte'], datasets: [{ data: [done, stateTasks.length - done], backgroundColor: ['#2563eb', '#F1F5F9'], borderWidth: 0, cutout: '85%' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
-            const clients = [...new Set(SOURCE_REPORT.map(t => t.client))];
-            chartInstances.bar = new Chart(ctx2, { type: 'bar', data: { labels: clients, datasets: [{ label: 'Validadas', data: clients.map(c => stateTasks.filter(t => t.client === c && t.status === 'done').length), backgroundColor: '#2563eb', borderRadius: 14 }, { label: 'Total', data: clients.map(c => stateTasks.filter(t => t.client === c && t.status !== 'done').length), backgroundColor: '#F1F5F9', borderRadius: 14 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true, display: false }, y: { stacked: true, border: { display: false }, grid: { display: false }, ticks: { font: { weight: '800', size: 10 } } } }, plugins: { legend: { display: false } } } });
-            chartInstances.header = new Chart(ctx3, { type: 'doughnut', data: { datasets: [{ data: [perc, 100 - perc], backgroundColor: ['#2563eb', '#F1F5F9'], borderWidth: 0 }] }, options: { cutout: '78%', plugins: { tooltip: { enabled: false } } } });
+            
+            // Solo renderizar si los contenedores existen y son visibles
+            if (currentViewMode === 'general') {
+                const ctx1 = document.getElementById('statusDoughnut')?.getContext('2d');
+                const ctx2 = document.getElementById('clientBarChart')?.getContext('2d');
+                if (ctx1 && ctx2) {
+                    if (chartInstances.doughnut) chartInstances.doughnut.destroy();
+                    if (chartInstances.bar) chartInstances.bar.destroy();
+                    chartInstances.doughnut = new Chart(ctx1, { type: 'doughnut', data: { labels: ['Validadas', 'Pdte'], datasets: [{ data: [done, stateTasks.length - done], backgroundColor: ['#2563eb', '#F1F5F9'], borderWidth: 0, cutout: '85%' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+                    const clients = [...new Set(SOURCE_REPORT.map(t => t.client))];
+                    chartInstances.bar = new Chart(ctx2, { type: 'bar', data: { labels: clients, datasets: [{ label: 'Validadas', data: clients.map(c => stateTasks.filter(t => t.client === c && t.status === 'done').length), backgroundColor: '#2563eb', borderRadius: 14 }, { label: 'Total', data: clients.map(c => stateTasks.filter(t => t.client === c && t.status !== 'done').length), backgroundColor: '#F1F5F9', borderRadius: 14 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true, display: false }, y: { stacked: true, border: { display: false }, grid: { display: false }, ticks: { font: { weight: '800', size: 10 } } } }, plugins: { legend: { display: false } } } });
+                }
+            }
+            
+            const ctx3 = document.getElementById('headerRadialChart')?.getContext('2d');
+            if (ctx3) {
+                if (chartInstances.header) chartInstances.header.destroy();
+                chartInstances.header = new Chart(ctx3, { type: 'doughnut', data: { datasets: [{ data: [perc, 100 - perc], backgroundColor: ['#2563eb', '#F1F5F9'], borderWidth: 0 }] }, options: { cutout: '78%', plugins: { tooltip: { enabled: false } } } });
+            }
         };
 
         window.setFilter = (f) => { filter = f; renderUI(); };
+        
         window.togglePillar = async (id, k) => {
             const task = stateTasks.find(t => t.id === id);
             task.components[k] = !task.components[k];
             task.status = Object.values(task.components).every(v => v) ? 'done' : 'pending';
             await window.firestoreTools.updateDoc(window.firestoreTools.doc(window.db, 'migrationTasks', id.toString()), { components: task.components, status: task.status });
         };
+
         window.openEditor = (id) => {
             const t = stateTasks.find(x => x.id === id);
             document.getElementById('task-id').value = id;
@@ -471,7 +586,9 @@
             document.getElementById('edit-modal').classList.remove('hidden');
             setTimeout(() => document.getElementById('modal-box').classList.remove('scale-95', 'opacity-0'), 10);
         };
+
         window.closeEditor = () => { document.getElementById('modal-box').classList.add('scale-95', 'opacity-0'); setTimeout(() => document.getElementById('edit-modal').classList.add('hidden'), 300); };
+        
         document.getElementById('editor-form').onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('task-id').value;
